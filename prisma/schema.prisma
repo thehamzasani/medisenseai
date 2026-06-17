@@ -1,0 +1,174 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ───────────────────────────────────────────────────────────────────
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum UrgencyLevel {
+  MONITOR
+  WATCH
+  SOON
+  URGENT
+}
+
+// ─── USER ────────────────────────────────────────────────────────────────────
+// NOTE: bloodType lives here (User-level), NOT on Assessment. Blood type does
+// not change between assessments — it is set once on the Profile page and
+// displayed on results pages by joining the user record.
+
+model User {
+  id          String       @id @default(cuid())
+  name        String
+  email       String       @unique
+  password    String?
+  image       String?
+  dateOfBirth DateTime?
+  gender      String?      // "Male" | "Female" | "Other"
+  bloodType   String?      // "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-" | null
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations — all three required by NextAuth PrismaAdapter
+  accounts    Account[]
+  sessions    Session[]
+  assessments Assessment[]
+
+  @@index([email])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── ASSESSMENT ──────────────────────────────────────────────────────────────
+// NOTE: No bloodType field here — see User model note above.
+
+model Assessment {
+  id        String   @id @default(cuid())
+  userId    String
+  createdAt DateTime @default(now())
+  label     String?
+
+  // ── Personal ──────────────────────────────────────────────────────────────
+  age    Int
+  gender String
+  weight Float    // kg
+  height Float    // cm
+  bmi    Float    // calculated
+
+  // ── Vital Signs ───────────────────────────────────────────────────────────
+  systolicBP      Int    // mmHg
+  diastolicBP     Int    // mmHg
+  heartRate       Int    // BPM
+  oxygenSat       Float  // % (SpO₂)
+  bodyTemperature Float  // °C
+  respiratoryRate Int    // breaths/min
+
+  // ── Lab Results ───────────────────────────────────────────────────────────
+  fastingGlucose Float   // mg/dL
+  hba1c          Float   // %
+  cholesterol    Float   // mg/dL (Total)
+  hdl            Float   // mg/dL
+  ldl            Float   // mg/dL
+  triglycerides  Float   // mg/dL
+  creatinine     Float?  // mg/dL
+  egfr           Float?  // mL/min/1.73m²
+  altEnzyme      Float?  // U/L (liver)
+  vitaminD       Float?  // ng/mL
+
+  // ── Lifestyle ─────────────────────────────────────────────────────────────
+  isSmoker          Boolean @default(false)
+  alcoholUse        Boolean @default(false)
+  isSedentary       Boolean @default(false)
+  exerciseFrequency String  @default("none")  // "none" | "1-2x" | "3-4x" | "5+x"
+  sleepHours        Float   @default(7)        // hours per night
+  stressLevel       String  @default("low")    // "low" | "moderate" | "high" | "very_high"
+  dailySugarIntake  String  @default("low")    // "low" | "moderate" | "high"
+  highSaltDiet      Boolean @default(false)
+
+  // ── Family History ────────────────────────────────────────────────────────
+  hasDiabetesFH      Boolean @default(false)
+  hasHeartDiseaseFH  Boolean @default(false)
+  hasHypertensionFH  Boolean @default(false)
+  hasStrokeFH        Boolean @default(false)
+  hasKidneyDiseaseFH Boolean @default(false)
+  hasCancerFH        Boolean @default(false)
+
+  // ── Symptoms (JSON array of symptom IDs) ──────────────────────────────────
+  symptoms String[] @default([])
+
+  // ── AI Analysis Results ───────────────────────────────────────────────────
+  engineResults      Json?   // EngineResult[] — all 10 engine outputs
+  bestEngine         String? // name of the winning engine (always Neural Network)
+  overallHealthIndex Int?    // 0-100
+
+  // Aggregated best-engine results
+  diabetesRisk       Float?
+  diabetesLevel      RiskLevel?
+  heartDiseaseRisk   Float?
+  heartDiseaseLevel  RiskLevel?
+  hypertensionRisk   Float?
+  hypertensionLevel  RiskLevel?
+  strokeRisk         Float?
+  strokeLevel        RiskLevel?
+  kidneyDiseaseRisk  Float?
+  kidneyDiseaseLevel RiskLevel?
+  liverDiseaseRisk   Float?
+  liverDiseaseLevel  RiskLevel?
+
+  urgency         UrgencyLevel?
+  urgencyText     String?
+  keyFactors      String[]      @default([])
+  recommendations Json?         // RecommendationsData — typed in src/types/index.ts
+  clinicalInsight String?
+
+  analysisStatus String  @default("PENDING") // PENDING | RUNNING | COMPLETE | FAILED
+  analysisError  String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}

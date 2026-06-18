@@ -1,3 +1,4 @@
+'use client'
 import type { RecommendationsData } from '@/types'
 import { toast } from 'sonner'
 

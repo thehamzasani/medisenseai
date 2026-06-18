@@ -1,4 +1,3 @@
-// src/components/recommendations/CarePathwayTimeline.tsx
 'use client'
 
 import { useState } from 'react'

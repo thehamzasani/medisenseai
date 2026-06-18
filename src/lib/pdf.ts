@@ -1,4 +1,4 @@
-// src/lib/pdf.ts
+
 import type { AssessmentWithResults, EngineResult } from '@/types'
 
 export async function generateAssessmentPDF(
@@ -38,10 +38,10 @@ export async function generateAssessmentPDF(
     }
   }
 
-  const formatRisk = (risk: number | null, level: string | null): string => {
-    if (risk == null) return 'N/A'
-    return `${risk}% — ${level ?? 'N/A'}`
-  }
+  // const formatRisk = (risk: number | null, level: string | null): string => {
+  //   if (risk == null) return 'N/A'
+  //   return `${risk}% — ${level ?? 'N/A'}`
+  // }
 
   const diseases = [
     { label: 'Diabetes',      risk: assessment.diabetesRisk,      level: assessment.diabetesLevel,      conf: engineResults.find(e => e.isBest)?.diseases.diabetes.confidence },

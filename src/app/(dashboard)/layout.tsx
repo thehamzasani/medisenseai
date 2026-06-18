@@ -1,4 +1,3 @@
-// src/app/(dashboard)/layout.tsx
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import Sidebar from '@/components/layout/Sidebar'

@@ -1,4 +1,4 @@
-import { getHealthScoreColor } from '@/lib/utils'
+// import { getHealthScoreColor } from '@/lib/utils'
 
 interface HealthScoreGaugeProps {
   score: number

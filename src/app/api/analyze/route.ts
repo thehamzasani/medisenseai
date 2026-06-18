@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server'
-// import type { Prisma } from '@prisma/client'
+import type { Prisma } from '@prisma/client'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { runAllEngines, aggregateResults } from '@/lib/claude'
 import type { AssessmentInput, ApiResponse } from '@/types'
 
-type JsonInputValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonInputValue[]
-  | { [key: string]: JsonInputValue | undefined }
+// type JsonInputValue =
+//   | string
+//   | number
+//   | boolean
+//   | null
+//   | JsonInputValue[]
+//   | { [key: string]: JsonInputValue | undefined }
 
 // ─── Rate limiting for /api/analyze (in-memory, dev-only) ────────────────────
 // Warning: In-memory rate limiting resets on cold starts / serverless restarts.
@@ -129,7 +129,7 @@ export async function POST(request: Request) {
     await db.assessment.update({
       where: { id: assessmentId },
       data: {
-        engineResults: engineResults as unknown as JsonInputValue,
+        engineResults: engineResults as unknown as Prisma.InputJsonValue,
         bestEngine: aggregate.bestEngine,
         overallHealthIndex: aggregate.overallHealthIndex,
 
@@ -149,7 +149,7 @@ export async function POST(request: Request) {
         urgency: aggregate.urgency,
         urgencyText: aggregate.urgencyText,
         keyFactors: aggregate.keyFactors,
-        recommendations: aggregate.recommendations as unknown as JsonInputValue,
+        recommendations: aggregate.recommendations as unknown as Prisma.InputJsonValue,
         clinicalInsight: aggregate.clinicalInsight,
 
         analysisStatus: 'COMPLETE',

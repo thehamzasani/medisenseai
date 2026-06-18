@@ -1,0 +1,50 @@
+import { z } from 'zod'
+
+export const assessmentSchema = z.object({
+  age:    z.number().int().min(1).max(120),
+  gender: z.enum(['Male', 'Female', 'Other']),
+  weight: z.number().min(10).max(500),
+  height: z.number().min(50).max(300),
+  bmi:    z.number().min(5).max(100),
+  systolicBP:      z.number().int().min(60).max(250),
+  diastolicBP:     z.number().int().min(30).max(160),
+  heartRate:       z.number().int().min(30).max(220),
+  oxygenSat:       z.number().min(70).max(100),
+  bodyTemperature: z.number().min(34).max(42),
+  respiratoryRate: z.number().int().min(8).max(60),
+  fastingGlucose: z.number().min(30).max(600),
+  hba1c:          z.number().min(2).max(20),
+  cholesterol:    z.number().min(50).max(600),
+  hdl:            z.number().min(10).max(200),
+  ldl:            z.number().min(10).max(500),
+  triglycerides:  z.number().min(20).max(2000),
+  creatinine:     z.number().min(0.1).max(20).nullable().optional(),
+  egfr:           z.number().min(1).max(200).nullable().optional(),
+  altEnzyme:      z.number().min(1).max(2000).nullable().optional(),
+  vitaminD:       z.number().min(1).max(200).nullable().optional(),
+  isSmoker:          z.boolean(),
+  alcoholUse:        z.boolean(),
+  isSedentary:       z.boolean(),
+  exerciseFrequency: z.enum(['none', '1-2x', '3-4x', '5+x']),
+  sleepHours:        z.number().min(0).max(24),
+  stressLevel:       z.enum(['low', 'moderate', 'high', 'very_high']),
+  dailySugarIntake:  z.enum(['low', 'moderate', 'high']),
+  highSaltDiet:      z.boolean(),
+  hasDiabetesFH:      z.boolean(),
+  hasHeartDiseaseFH:  z.boolean(),
+  hasHypertensionFH:  z.boolean(),
+  hasStrokeFH:        z.boolean(),
+  hasKidneyDiseaseFH: z.boolean(),
+  hasCancerFH:        z.boolean(),
+  symptoms: z.array(z.string()).default([]),
+  label: z.string().max(100).optional(),
+})
+export type AssessmentFormData = z.infer<typeof assessmentSchema>
+
+export const userProfileSchema = z.object({
+  name:        z.string().min(2).max(80).optional(),
+  dateOfBirth: z.string().datetime().nullable().optional(),
+  gender:      z.enum(['Male', 'Female', 'Other']).nullable().optional(),
+  bloodType:   z.enum(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']).nullable().optional(),
+})
+export type UserProfileFormData = z.infer<typeof userProfileSchema>

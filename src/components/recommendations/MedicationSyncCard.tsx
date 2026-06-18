@@ -1,6 +1,6 @@
 'use client'
 import type { RecommendationsData } from '@/types'
-import { toast } from 'sonner'
+// import { toast } from 'sonner'
 
 interface Props {
   recommendations: RecommendationsData
@@ -30,11 +30,11 @@ const actionConfig = {
 export default function MedicationSyncCard({ recommendations }: Props) {
   const { medications } = recommendations
 
-  const handleUpdatePrescription = () => {
-    if (typeof window !== 'undefined') {
-      // Client-only toast — this component renders on server, button click is client
-    }
-  }
+  // const handleUpdatePrescription = () => {
+  //   if (typeof window !== 'undefined') {
+  //     // Client-only toast — this component renders on server, button click is client
+  //   }
+  // }
 
   return (
     <div className="surface-glass rounded-2xl p-6 flex flex-col h-full relative overflow-hidden">

@@ -36,7 +36,7 @@ export default function ClinicalInsightCard({ assessment }: ClinicalInsightCardP
             className="absolute -top-2 -left-1 text-5xl text-primary-fixed-dim/20 font-serif leading-none select-none"
             aria-hidden
           >
-            "
+            
           </span>
           <p className="text-body-md text-on-surface leading-relaxed pl-4 pt-2">
             {insight}

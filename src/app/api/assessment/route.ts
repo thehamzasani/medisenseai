@@ -2,61 +2,61 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import type { ApiResponse, AssessmentListItem, AnalysisStatus } from '@/types'
-
+import type { ApiResponse, AssessmentListItem, AnalysisStatus, RiskLevel } from '@/types'
+import { assessmentSchema } from '@/lib/validations'
 // ─── ZOD SCHEMA (no bloodType field — that belongs to /api/users/me) ─────────
-export const assessmentSchema = z.object({
-  // Personal
-  age: z.number().int().min(1).max(120),
-  gender: z.enum(['Male', 'Female', 'Other']),
-  weight: z.number().min(10).max(500), // kg
-  height: z.number().min(50).max(300), // cm
-  bmi: z.number().min(5).max(100),
+// export const assessmentSchema = z.object({
+//   // Personal
+//   age: z.number().int().min(1).max(120),
+//   gender: z.enum(['Male', 'Female', 'Other']),
+//   weight: z.number().min(10).max(500), // kg
+//   height: z.number().min(50).max(300), // cm
+//   bmi: z.number().min(5).max(100),
 
-  // Vital signs
-  systolicBP: z.number().int().min(60).max(250),
-  diastolicBP: z.number().int().min(30).max(160),
-  heartRate: z.number().int().min(30).max(220),
-  oxygenSat: z.number().min(70).max(100),
-  bodyTemperature: z.number().min(34).max(42), // °C
-  respiratoryRate: z.number().int().min(8).max(60),
+//   // Vital signs
+//   systolicBP: z.number().int().min(60).max(250),
+//   diastolicBP: z.number().int().min(30).max(160),
+//   heartRate: z.number().int().min(30).max(220),
+//   oxygenSat: z.number().min(70).max(100),
+//   bodyTemperature: z.number().min(34).max(42), // °C
+//   respiratoryRate: z.number().int().min(8).max(60),
 
-  // Lab results
-  fastingGlucose: z.number().min(30).max(600),
-  hba1c: z.number().min(2).max(20),
-  cholesterol: z.number().min(50).max(600),
-  hdl: z.number().min(10).max(200),
-  ldl: z.number().min(10).max(500),
-  triglycerides: z.number().min(20).max(2000),
-  creatinine: z.number().min(0.1).max(20).nullable().optional(),
-  egfr: z.number().min(1).max(200).nullable().optional(),
-  altEnzyme: z.number().min(1).max(2000).nullable().optional(),
-  vitaminD: z.number().min(1).max(200).nullable().optional(),
+//   // Lab results
+//   fastingGlucose: z.number().min(30).max(600),
+//   hba1c: z.number().min(2).max(20),
+//   cholesterol: z.number().min(50).max(600),
+//   hdl: z.number().min(10).max(200),
+//   ldl: z.number().min(10).max(500),
+//   triglycerides: z.number().min(20).max(2000),
+//   creatinine: z.number().min(0.1).max(20).nullable().optional(),
+//   egfr: z.number().min(1).max(200).nullable().optional(),
+//   altEnzyme: z.number().min(1).max(2000).nullable().optional(),
+//   vitaminD: z.number().min(1).max(200).nullable().optional(),
 
-  // Lifestyle
-  isSmoker: z.boolean(),
-  alcoholUse: z.boolean(),
-  isSedentary: z.boolean(),
-  exerciseFrequency: z.enum(['none', '1-2x', '3-4x', '5+x']),
-  sleepHours: z.number().min(0).max(24),
-  stressLevel: z.enum(['low', 'moderate', 'high', 'very_high']),
-  dailySugarIntake: z.enum(['low', 'moderate', 'high']),
-  highSaltDiet: z.boolean(),
+//   // Lifestyle
+//   isSmoker: z.boolean(),
+//   alcoholUse: z.boolean(),
+//   isSedentary: z.boolean(),
+//   exerciseFrequency: z.enum(['none', '1-2x', '3-4x', '5+x']),
+//   sleepHours: z.number().min(0).max(24),
+//   stressLevel: z.enum(['low', 'moderate', 'high', 'very_high']),
+//   dailySugarIntake: z.enum(['low', 'moderate', 'high']),
+//   highSaltDiet: z.boolean(),
 
-  // Family history
-  hasDiabetesFH: z.boolean(),
-  hasHeartDiseaseFH: z.boolean(),
-  hasHypertensionFH: z.boolean(),
-  hasStrokeFH: z.boolean(),
-  hasKidneyDiseaseFH: z.boolean(),
-  hasCancerFH: z.boolean(),
+//   // Family history
+//   hasDiabetesFH: z.boolean(),
+//   hasHeartDiseaseFH: z.boolean(),
+//   hasHypertensionFH: z.boolean(),
+//   hasStrokeFH: z.boolean(),
+//   hasKidneyDiseaseFH: z.boolean(),
+//   hasCancerFH: z.boolean(),
 
-  // Symptoms
-  symptoms: z.array(z.string()).default([]),
+//   // Symptoms
+//   symptoms: z.array(z.string()).default([]),
 
-  // Optional label
-  label: z.string().max(100).optional(),
-})
+//   // Optional label
+//   label: z.string().max(100).optional(),
+// })
 
 export type AssessmentFormData = z.infer<typeof assessmentSchema>
 
@@ -82,16 +82,27 @@ export async function GET() {
     },
   })
 
-  const data: AssessmentListItem[] = rows.map((row : any)=> ({  //todo any need to be replaced by correct data type
-    id: row.id,
-    createdAt: row.createdAt.toISOString(),
-    label: row.label,
-    overallHealthIndex: row.overallHealthIndex,
-    analysisStatus: row.analysisStatus as AnalysisStatus,
-    diabetesLevel: row.diabetesLevel,
-    heartDiseaseLevel: row.heartDiseaseLevel,
-    hypertensionLevel: row.hypertensionLevel,
-  }))
+  type AssessmentRow = {
+    id: string
+    createdAt: Date
+    label: string | null
+    overallHealthIndex: number | null
+    analysisStatus: string
+    diabetesLevel: string | null
+    heartDiseaseLevel: string | null
+    hypertensionLevel: string | null
+  }
+
+  const data: AssessmentListItem[] = rows.map((row: AssessmentRow) => ({
+  id: row.id,
+  createdAt: row.createdAt.toISOString(),
+  label: row.label,
+  overallHealthIndex: row.overallHealthIndex,
+  analysisStatus: row.analysisStatus as AnalysisStatus,
+  diabetesLevel: row.diabetesLevel as RiskLevel | null,
+  heartDiseaseLevel: row.heartDiseaseLevel as RiskLevel | null,
+  hypertensionLevel: row.hypertensionLevel as RiskLevel | null,
+}))
 
   const response: ApiResponse<AssessmentListItem[]> = { success: true, data }
   return NextResponse.json(response)

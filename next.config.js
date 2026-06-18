@@ -6,9 +6,6 @@ const nextConfig = {
     ],
     formats: ['image/webp', 'image/avif'],
   },
-  experimental: {
-    webpackMemoryOptimizations: true,
-  },
   webpack: (config, { dev }) => {
     if (dev) {
       config.watchOptions = {

@@ -1,6 +1,6 @@
 import type { AssessmentWithResults } from '@/types'
-import ProgressBar from '@/components/shared/ProgressBar'
-import { getHealthScoreColor } from '@/lib/utils'
+// import ProgressBar from '@/components/shared/ProgressBar'
+// import { getHealthScoreColor } from '@/lib/utils'
 
 interface PatientSummaryCardProps {
   assessment: AssessmentWithResults

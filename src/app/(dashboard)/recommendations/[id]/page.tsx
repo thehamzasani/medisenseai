@@ -13,11 +13,11 @@ interface Props {
   params: { id: string }
 }
 
-export async function generateMetadata({ params }: Props) {
-  return {
-    title: `Recommendations — MediSense AI`,
-  }
-}
+// export async function generateMetadata({ params }: Props) {
+//   return {
+//     title: `Recommendations — MediSense AI`,
+//   }
+// }
 
 export default async function RecommendationsPage({ params }: Props) {
   const session = await auth()

@@ -76,7 +76,7 @@ export default async function ResultsPage({ params }: Props) {
             </p>
 
             <div className="grid grid-cols-2 gap-2 text-left">
-              {ENGINE_DEFINITIONS.map((eng, i) => (
+              {ENGINE_DEFINITIONS.map((eng) => (
                 <div key={eng.name} className="flex items-center gap-2 text-[11px] text-on-surface-variant p-2 rounded-lg bg-surface-container-high/50">
                   <span className="material-symbols-outlined text-primary-fixed-dim" style={{ fontSize: 14 }}>
                     {eng.icon}

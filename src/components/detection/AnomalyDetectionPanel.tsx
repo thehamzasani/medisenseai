@@ -17,14 +17,14 @@ export default function AnomalyDetectionPanel({ assessment }: Props) {
     (assessment.hypertensionLevel === 'HIGH' || assessment.hypertensionLevel === 'CRITICAL') ||
     (assessment.strokeLevel === 'HIGH' || assessment.strokeLevel === 'CRITICAL')
 
-  const markerColor = isHighRisk ? 'border-error/50' : 'border-tertiary-fixed-dim'
-  const markerGlow = isHighRisk
-    ? '0 0 20px rgba(255,180,171,0.4)'
-    : '0 0 20px rgba(60,221,199,0.4)'
+  // const markerColor = isHighRisk ? 'border-error/50' : 'border-tertiary-fixed-dim'
+  // const markerGlow = isHighRisk
+  //   ? '0 0 20px rgba(255,180,171,0.4)'
+  //   : '0 0 20px rgba(60,221,199,0.4)'
 
-  // Determine anomaly position based on risk
-  const anomalyX = isHighRisk ? 62 : 45
-  const anomalyY = isHighRisk ? 38 : 55
+  // // Determine anomaly position based on risk
+  // const anomalyX = isHighRisk ? 62 : 45
+  // const anomalyY = isHighRisk ? 38 : 55
 
   useEffect(() => {
     const interval = setInterval(() => {

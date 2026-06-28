@@ -1,11 +1,24 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
-import { useState } from 'react'
+import { useSession, signOut } from 'next-auth/react'
+import { useState, useRef, useEffect } from 'react'
+import Link from 'next/link'
 
 export default function TopNav() {
   const { data: session } = useSession()
   const [search, setSearch] = useState('')
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Derive initials from user name
   const name = session?.user?.name ?? 'User'
@@ -49,29 +62,71 @@ export default function TopNav() {
           <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-error border-2 border-surface" />
         </button>
 
-        {/* User avatar + info */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-bold text-on-primary shrink-0"
-              style={{
-                background: 'linear-gradient(135deg, #00dbe7 0%, #006a71 100%)',
-              }}
-            >
-              {initials}
+        {/* User avatar + dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setDropdownOpen(!dropdownOpen)}
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+          >
+            <div className="flex items-center gap-2">
+              <div
+                className="flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-bold text-on-primary shrink-0"
+                style={{
+                  background: 'linear-gradient(135deg, #00dbe7 0%, #006a71 100%)',
+                }}
+              >
+                {initials}
+              </div>
+              <div className="hidden md:flex flex-col leading-tight text-left">
+                <span className="text-label-md font-semibold text-on-surface">
+                  {name}
+                </span>
+                <span className="text-[11px] text-on-surface-variant">
+                  Clinical User
+                </span>
+              </div>
             </div>
-            <div className="hidden md:flex flex-col leading-tight">
-              <span className="text-label-md font-semibold text-on-surface">
-                {name}
-              </span>
-              <span className="text-[11px] text-on-surface-variant">
-                Clinical User
-              </span>
-            </div>
-          </div>
-          <button className="text-on-surface-variant hover:text-primary transition-colors">
-            <span className="material-symbols-outlined text-[18px]">expand_more</span>
+            <span className="material-symbols-outlined text-[18px] text-on-surface-variant">
+              expand_more
+            </span>
           </button>
+
+          {/* Dropdown menu */}
+          {dropdownOpen && (
+            <div className="absolute right-0 top-full mt-2 w-48 surface-glass rounded-xl border border-outline-variant/20 shadow-lg overflow-hidden">
+              <div className="px-4 py-3 border-b border-outline-variant/10">
+                <p className="text-label-sm font-semibold text-on-surface truncate">{name}</p>
+                <p className="text-[10px] text-on-surface-variant truncate">{session?.user?.email ?? ''}</p>
+              </div>
+              <div className="py-1">
+                <Link
+                  href="/profile"
+                  onClick={() => setDropdownOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2 text-label-sm text-on-surface hover:bg-surface-container-high transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[16px] text-on-surface-variant">person</span>
+                  Profile
+                </Link>
+                <Link
+                  href="/dashboard"
+                  onClick={() => setDropdownOpen(false)}
+                  className="flex items-center gap-2 px-4 py-2 text-label-sm text-on-surface hover:bg-surface-container-high transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[16px] text-on-surface-variant">dashboard</span>
+                  Dashboard
+                </Link>
+              </div>
+              <div className="border-t border-outline-variant/10 py-1">
+                <button
+                  onClick={() => signOut({ callbackUrl: '/login' })}
+                  className="flex items-center gap-2 px-4 py-2 text-label-sm text-error hover:bg-error/10 transition-colors w-full text-left"
+                >
+                  <span className="material-symbols-outlined text-[16px]">logout</span>
+                  Sign out
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>

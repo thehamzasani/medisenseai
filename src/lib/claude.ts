@@ -292,7 +292,7 @@
 
 // src/lib/claude.ts
 import { GoogleGenAI, Type } from '@google/genai'
-import type { AssessmentInput, EngineResult, AggregateResult, RiskLevel, UrgencyLevel, RecommendationsData } from '@/types'
+import type { AssessmentInput, EngineResult, AggregateResult, RiskLevel, UrgencyLevel, RecommendationsData, DiseaseKey, EnsembleMetrics, DiseaseEnsembleInfo, EngineWeight, ExplainabilityData, ExplainabilityMap } from '@/types'
 import { ENGINE_DEFINITIONS } from '@/constants'
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
@@ -305,6 +305,12 @@ const DISEASE_RISK_SCHEMA = {
     risk: { type: Type.NUMBER },
     level: { type: Type.STRING, enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] },
     confidence: { type: Type.NUMBER },
+    factors: { type: Type.ARRAY, items: { type: Type.STRING }, description: '3-5 specific clinical factors driving this disease risk prediction' },
+    featureImportance: {
+      type: Type.OBJECT,
+      description: 'Map of feature names to their importance scores (0-1)',
+      additionalProperties: { type: Type.NUMBER },
+    },
   },
   required: ['risk', 'level', 'confidence'],
 }
@@ -330,6 +336,26 @@ const ENGINE_RESPONSE_SCHEMA = {
     urgency: { type: Type.STRING, enum: ['MONITOR', 'WATCH', 'SOON', 'URGENT'] },
   },
   required: ['diseases', 'keyFactors', 'recommendations', 'insight', 'urgency'],
+}
+
+// ─── Adaptive context: summary of previous assessment for trend-aware AI ──────
+export function buildAdaptiveContext(
+  prev: { overallHealthIndex?: number | null; diabetesRisk?: number | null; heartDiseaseRisk?: number | null; hypertensionRisk?: number | null; strokeRisk?: number | null; kidneyDiseaseRisk?: number | null; liverDiseaseRisk?: number | null } | null,
+): string {
+  if (!prev) return ''
+  return `
+
+[ HISTORICAL CONTEXT — Previous Assessment ]
+Previous Health Index: ${prev.overallHealthIndex ?? 'N/A'}
+Previous Disease Risks:
+  Diabetes:      ${prev.diabetesRisk ?? 'N/A'}%
+  Heart Disease: ${prev.heartDiseaseRisk ?? 'N/A'}%
+  Hypertension:  ${prev.hypertensionRisk ?? 'N/A'}%
+  Stroke:        ${prev.strokeRisk ?? 'N/A'}%
+  Kidney:        ${prev.kidneyDiseaseRisk ?? 'N/A'}%
+  Liver:         ${prev.liverDiseaseRisk ?? 'N/A'}%
+
+NOTE: Compare current findings with previous assessment. If risk scores have significantly increased, note this in your insight and adjust urgency accordingly. If scores have improved, acknowledge the positive trend.`
 }
 
 // ─── ENGINE PERSONAS (all 10) ─────────────────────────────────────────────────
@@ -443,18 +469,20 @@ export async function runSingleEngine(
 Return ONLY a valid JSON object with this exact structure (no markdown, no explanation):
 {
   "diseases": {
-    "diabetes":      { "risk": <0-100>, "level": <"LOW"|"MEDIUM"|"HIGH"|"CRITICAL">, "confidence": <0-100> },
-    "heartDisease":  { "risk": <0-100>, "level": <"LOW"|"MEDIUM"|"HIGH"|"CRITICAL">, "confidence": <0-100> },
-    "hypertension":  { "risk": <0-100>, "level": <"LOW"|"MEDIUM"|"HIGH"|"CRITICAL">, "confidence": <0-100> },
-    "stroke":        { "risk": <0-100>, "level": <"LOW"|"MEDIUM"|"HIGH"|"CRITICAL">, "confidence": <0-100> },
-    "kidneyDisease": { "risk": <0-100>, "level": <"LOW"|"MEDIUM"|"HIGH"|"CRITICAL">, "confidence": <0-100> },
-    "liverDisease":  { "risk": <0-100>, "level": <"LOW"|"MEDIUM"|"HIGH"|"CRITICAL">, "confidence": <0-100> }
+    "diabetes":      { "risk": <0-100>, "level": <"LOW"|"MEDIUM"|"HIGH"|"CRITICAL">, "confidence": <0-100>, "factors": [<3-5 specific clinical factors driving this prediction>], "featureImportance": { "<feature_name>": <0-1 importance>, ... } },
+    "heartDisease":  { "risk": <0-100>, "level": <"LOW"|"MEDIUM"|"HIGH"|"CRITICAL">, "confidence": <0-100>, "factors": [...], "featureImportance": {...} },
+    "hypertension":  { "risk": <0-100>, "level": <"LOW"|"MEDIUM"|"HIGH"|"CRITICAL">, "confidence": <0-100>, "factors": [...], "featureImportance": {...} },
+    "stroke":        { "risk": <0-100>, "level": <"LOW"|"MEDIUM"|"HIGH"|"CRITICAL">, "confidence": <0-100>, "factors": [...], "featureImportance": {...} },
+    "kidneyDisease": { "risk": <0-100>, "level": <"LOW"|"MEDIUM"|"HIGH"|"CRITICAL">, "confidence": <0-100>, "factors": [...], "featureImportance": {...} },
+    "liverDisease":  { "risk": <0-100>, "level": <"LOW"|"MEDIUM"|"HIGH"|"CRITICAL">, "confidence": <0-100>, "factors": [...], "featureImportance": {...} }
   },
   "keyFactors":    [<3-5 specific clinical observations>],
   "recommendations":[<3-5 actionable recommendations>],
   "insight":       "<1-2 sentence clinical narrative>",
   "urgency":       <"MONITOR"|"WATCH"|"SOON"|"URGENT">
-}`
+}
+
+IMPORTANT: For each disease, include a "factors" array listing the top clinical observations that influenced that specific disease risk. Also include a "featureImportance" map showing which patient features (e.g., hba1c, bmi, systolicBP) most influenced the prediction and their relative importance (0-1).`
     )
 
     const inferenceMs = Date.now() - start
@@ -464,6 +492,16 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no expla
       throw new Error(`No JSON found in Gemini response: ${raw}`)
     }
     const parsed = JSON.parse(jsonMatch[0])
+
+    // Ensure per-disease explainability fields survive parsing
+    const diseaseKeys = ['diabetes', 'heartDisease', 'hypertension', 'stroke', 'kidneyDisease', 'liverDisease']
+    for (const key of diseaseKeys) {
+      const d = parsed.diseases?.[key]
+      if (d) {
+        d.factors = d.factors ?? []
+        d.featureImportance = d.featureImportance ?? {}
+      }
+    }
 
     return {
       engine: engineName,
@@ -509,15 +547,20 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no expla
 }
 
 // ─── Run all 10 engines — staggered to respect Gemini free-tier rate limits ───
-export async function runAllEngines(assessment: AssessmentInput): Promise<EngineResult[]> {
+export async function runAllEngines(
+  assessment: AssessmentInput,
+  previousAssessment?: { overallHealthIndex?: number | null; diabetesRisk?: number | null; heartDiseaseRisk?: number | null; hypertensionRisk?: number | null; strokeRisk?: number | null; kidneyDiseaseRisk?: number | null; liverDiseaseRisk?: number | null } | null,
+): Promise<EngineResult[]> {
   const patientData = buildPatientDataPrompt(assessment)
+  const adaptiveContext = buildAdaptiveContext(previousAssessment ?? null)
+  const fullPrompt = adaptiveContext ? `${patientData}${adaptiveContext}` : patientData
   const STAGGER_MS = 350 // spreads 10 calls over ~3.15s instead of firing all at once
 
   const settled = await Promise.allSettled(
     ENGINE_DEFINITIONS.map((def, index) =>
       new Promise<EngineResult>(resolve => {
         setTimeout(() => {
-          runSingleEngine(def.name, ENGINE_PERSONAS[def.name], patientData, def).then(resolve)
+          runSingleEngine(def.name, ENGINE_PERSONAS[def.name], fullPrompt, def).then(resolve)
         }, index * STAGGER_MS)
       })
     )
@@ -545,6 +588,78 @@ export async function runAllEngines(assessment: AssessmentInput): Promise<Engine
   })
 }
 
+// ─── Helper: compute standard deviation ──────────────────────────────────────
+function stdDev(values: number[]): number {
+  const mean = values.reduce((s, v) => s + v, 0) / values.length
+  const squaredDiffs = values.map(v => (v - mean) ** 2)
+  return Math.sqrt(squaredDiffs.reduce((s, v) => s + v, 0) / values.length)
+}
+
+// ─── Compute per-disease ensemble info ────────────────────────────────────────
+function computeDiseaseEnsemble(
+  key: DiseaseKey,
+  results: EngineResult[],
+): DiseaseEnsembleInfo {
+  // Confidence-weighted risk (accuracy × confidence as weight)
+  const confWeighted = results.map(r => ({
+    name: r.engine,
+    weight: (r.accuracy * r.diseases[key].confidence) / 100,
+    risk: r.diseases[key].risk,
+    confidence: r.diseases[key].confidence,
+    level: r.diseases[key].level,
+    accuracy: r.accuracy,
+  }))
+  const totalConfWeight = confWeighted.reduce((s, r) => s + r.weight, 0) || 1
+
+  // Confidence-weighted risk score
+  const confWeightedRisk = Math.round(
+    confWeighted.reduce((s, r) => s + r.risk * r.weight, 0) / totalConfWeight,
+  )
+
+  // Majority vote for level
+  const levels = results.map(r => r.diseases[key].level)
+  const counts: Record<string, number> = {}
+  levels.forEach(l => { counts[l] = (counts[l] ?? 0) + 1 })
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1])
+  const consensusLevel = (sorted[0]?.[0] ?? 'MEDIUM') as RiskLevel
+
+  // Agreement score: how strong the majority is (0-100)
+  const majorityCount = sorted[0]?.[1] ?? 0
+  const agreementScore = Math.round((majorityCount / results.length) * 100)
+
+  // Standard deviation of risks
+  const scores = results.map(r => r.diseases[key].risk)
+  const dev = Math.round(stdDev(scores) * 10) / 10
+
+  // Top contributors by confidence-weighted influence
+  const sortedByWeight = [...confWeighted].sort((a, b) => b.weight - a.weight)
+  const topWeights: EngineWeight[] = sortedByWeight.slice(0, 5).map(r => ({
+    name: r.name,
+    weight: Math.round((r.weight / totalConfWeight) * 100) / 100,
+    risk: r.risk,
+    accuracy: r.accuracy,
+  }))
+
+  return {
+    risk: confWeightedRisk,
+    level: dominantLevel(key, results),
+    consensusLevel,
+    agreementScore,
+    stdDev: dev,
+    weights: topWeights,
+    topContributors: sortedByWeight.slice(0, 3).map(r => r.name),
+  }
+}
+
+// ─── Helper: dominant level via majority vote ─────────────────────────────────
+function dominantLevel(key: keyof EngineResult['diseases'], results: EngineResult[]): RiskLevel {
+  const levels = results.map(r => r.diseases[key].level)
+  const counts: Record<string, number> = {}
+  levels.forEach(l => { counts[l] = (counts[l] ?? 0) + 1 })
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1])
+  return (sorted[0]?.[0] ?? 'MEDIUM') as RiskLevel
+}
+
 // ─── Aggregate all engine results into final DB fields ────────────────────────
 export function aggregateResults(results: EngineResult[]): AggregateResult {
   const best = results.find(r => r.isBest) ?? results[0]
@@ -552,18 +667,11 @@ export function aggregateResults(results: EngineResult[]): AggregateResult {
     throw new Error('aggregateResults received an empty results array — this should never happen since ENGINE_DEFINITIONS always has 10 entries.')
   }
 
-  // Weighted average per disease (higher accuracy = higher weight)
+  // Accuracy-weighted average per disease (original method)
   const totalWeight = results.reduce((s, r) => s + r.accuracy, 0)
   function weightedRisk(key: keyof EngineResult['diseases']): number {
     const sum = results.reduce((s, r) => s + r.diseases[key].risk * r.accuracy, 0)
     return Math.round(sum / totalWeight)
-  }
-  function dominantLevel(key: keyof EngineResult['diseases']): RiskLevel {
-    const levels = results.map(r => r.diseases[key].level)
-    const counts: Record<string, number> = {}
-    levels.forEach(l => { counts[l] = (counts[l] ?? 0) + 1 })
-    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1])
-    return (sorted[0]?.[0] ?? 'MEDIUM') as RiskLevel
   }
 
   const dRisk = weightedRisk('diabetes')
@@ -576,6 +684,48 @@ export function aggregateResults(results: EngineResult[]): AggregateResult {
   // Overall health index (100 minus weighted average of all disease risks)
   const avgRisk = Math.round((dRisk + hvRisk + htRisk + stRisk + kdRisk + lvRisk) / 6)
   const overallHealthIndex = Math.max(0, Math.min(100, 100 - avgRisk))
+
+  // ─── Hybrid Ensemble Metrics ─────────────────────────────────────────────
+  const diseaseKeys: DiseaseKey[] = ['diabetes', 'heartDisease', 'hypertension', 'stroke', 'kidneyDisease', 'liverDisease']
+  const diseaseMap = {} as Record<DiseaseKey, DiseaseEnsembleInfo>
+  for (const key of diseaseKeys) {
+    diseaseMap[key] = computeDiseaseEnsemble(key, results)
+  }
+
+  // Overall agreement: average of all per-disease agreement scores
+  const overallAgreement = Math.round(
+    diseaseKeys.reduce((s, k) => s + diseaseMap[k].agreementScore, 0) / diseaseKeys.length,
+  )
+
+  // Weighted confidence: average confidence across all engines, weighted by accuracy
+  const totalConfAcc = results.reduce((s, r) => {
+    const avgConf = diseaseKeys.reduce((cs, k) => cs + r.diseases[k].confidence, 0) / diseaseKeys.length
+    return s + avgConf * r.accuracy
+  }, 0)
+  const weightedConfidence = Math.round(totalConfAcc / totalWeight)
+
+  // Generate meta insight about ensemble behavior
+  const lowAgreementDiseases = diseaseKeys.filter(k => diseaseMap[k].agreementScore < 70)
+  const highDisagreement = diseaseKeys.filter(k => diseaseMap[k].stdDev > 15)
+  let metaInsight = ''
+  if (lowAgreementDiseases.length === 0) {
+    metaInsight = 'All engines show strong consensus across all disease predictions — high confidence in ensemble output.'
+  } else if (lowAgreementDiseases.length <= 2) {
+    metaInsight = `Engines show moderate disagreement on ${lowAgreementDiseases.map(k => k.charAt(0).toUpperCase() + k.slice(1)).join(' and ')}. Consider re-evaluating these risk factors with additional clinical data.`
+  } else {
+    metaInsight = `Significant divergence across engines for ${lowAgreementDiseases.length} disease categories. Ensemble confidence is reduced — clinical validation recommended.`
+  }
+  if (highDisagreement.length > 0) {
+    metaInsight += ` Highest variance observed in: ${highDisagreement.map(k => k.replace(/([A-Z])/g, ' $1').trim()).join(', ')}.`
+  }
+
+  const ensembleMetrics: EnsembleMetrics = {
+    agreementScore: overallAgreement,
+    weightedConfidence,
+    totalWeight: Math.round(totalWeight * 10) / 10,
+    diseases: diseaseMap,
+    metaInsight,
+  }
 
   // Urgency from best engine
   const urgency: UrgencyLevel = best.urgency ?? 'MONITOR'
@@ -620,11 +770,42 @@ export function aggregateResults(results: EngineResult[]): AggregateResult {
     keyFactors: best.keyFactors,
     clinicalInsight: best.insight,
     recommendations,
-    diabetesRisk: dRisk, diabetesLevel: dominantLevel('diabetes'),
-    heartDiseaseRisk: hvRisk, heartDiseaseLevel: dominantLevel('heartDisease'),
-    hypertensionRisk: htRisk, hypertensionLevel: dominantLevel('hypertension'),
-    strokeRisk: stRisk, strokeLevel: dominantLevel('stroke'),
-    kidneyDiseaseRisk: kdRisk, kidneyDiseaseLevel: dominantLevel('kidneyDisease'),
-    liverDiseaseRisk: lvRisk, liverDiseaseLevel: dominantLevel('liverDisease'),
+    diabetesRisk: dRisk, diabetesLevel: dominantLevel('diabetes', results),
+    heartDiseaseRisk: hvRisk, heartDiseaseLevel: dominantLevel('heartDisease', results),
+    hypertensionRisk: htRisk, hypertensionLevel: dominantLevel('hypertension', results),
+    strokeRisk: stRisk, strokeLevel: dominantLevel('stroke', results),
+    kidneyDiseaseRisk: kdRisk, kidneyDiseaseLevel: dominantLevel('kidneyDisease', results),
+    liverDiseaseRisk: lvRisk, liverDiseaseLevel: dominantLevel('liverDisease', results),
+    ensembleMetrics,
+  }
+}
+
+// ─── Compute Explainability Data from best engine ────────────────────────────
+export function computeExplainability(results: EngineResult[]): ExplainabilityData {
+  const best = results.find(r => r.isBest) ?? results[0]
+  const diseaseKeys: DiseaseKey[] = ['diabetes', 'heartDisease', 'hypertension', 'stroke', 'kidneyDisease', 'liverDisease']
+
+  const perDisease: ExplainabilityMap = {}
+  for (const key of diseaseKeys) {
+    const d = best.diseases[key]
+    const factors = d.factors ?? []
+    const featureImportance = d.featureImportance ?? {}
+    const entries = Object.entries(featureImportance)
+    const sorted = entries.sort((a, b) => b[1] - a[1])
+    const topPositive = sorted.filter(e => e[1] > 0.3).map(e => e[0])
+    const topNegative = sorted.filter(e => e[1] < -0.1).map(e => e[0])
+
+    perDisease[key] = {
+      factors: factors.length > 0 ? factors : [`${key} analysis — see key factors for details`],
+      featureImportance,
+      topPositiveFactors: topPositive,
+      topNegativeFactors: topNegative,
+    }
+  }
+
+  return {
+    perDisease,
+    modelUsed: best.engine,
+    overallInsight: best.insight,
   }
 }

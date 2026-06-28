@@ -7,6 +7,7 @@ import PatientSummaryCard from '@/components/results/PatientSummaryCard'
 import DiseasePredictionCard from '@/components/results/DiseasePredictionCard'
 import ClinicalInsightCard from '@/components/results/ClinicalInsightCard'
 import { ENGINE_DEFINITIONS } from '@/constants'
+import type { TrendDirection } from '@/types'
 
 interface Props {
   params: { id: string }
@@ -219,6 +220,8 @@ export default async function ResultsPage({ params }: Props) {
               level: assessment[`${key}Level`] ?? risk?.level ?? null,
               confidence: risk?.confidence ?? 90,
             }
+            const rd = assessment.riskDelta?.[key]
+            const riskDelta = rd ? { delta: rd.delta, trend: rd.trend as TrendDirection } : undefined
             return (
               <DiseasePredictionCard
                 key={key}
@@ -227,6 +230,8 @@ export default async function ResultsPage({ params }: Props) {
                 risk={topRisk as { risk: number; level: import('@/types').RiskLevel; confidence: number }}
                 modelName={assessment.bestEngine ?? 'Neural Network'}
                 modelVersion="v5.0"
+                explainHref={`/explain/${params.id}#${key}`}
+                riskDelta={riskDelta}
               />
             )
           })}
@@ -247,6 +252,8 @@ export default async function ResultsPage({ params }: Props) {
               modelName={assessment.bestEngine ?? 'Neural Network'}
               modelVersion="v5.0"
               wide
+              explainHref={`/explain/${params.id}#heartDisease`}
+              riskDelta={assessment.riskDelta?.heartDisease ? { delta: assessment.riskDelta.heartDisease.delta, trend: assessment.riskDelta.heartDisease.trend as TrendDirection } : undefined}
             />
           </div>
 
@@ -263,6 +270,8 @@ export default async function ResultsPage({ params }: Props) {
             const riskPct = assessment[`${key}Risk`] ?? bestEngineResult?.diseases[key].risk ?? 0
             const riskLvl = assessment[`${key}Level`] ?? bestEngineResult?.diseases[key].level ?? null
             const conf = bestEngineResult?.diseases[key].confidence ?? 90
+            const rd = assessment.riskDelta?.[key]
+            const riskDelta = rd ? { delta: rd.delta, trend: rd.trend as TrendDirection } : undefined
             return (
               <DiseasePredictionCard
                 key={key}
@@ -271,6 +280,8 @@ export default async function ResultsPage({ params }: Props) {
                 risk={{ risk: riskPct, level: riskLvl, confidence: conf } as { risk: number; level: import('@/types').RiskLevel; confidence: number }}
                 modelName={assessment.bestEngine ?? 'Neural Network'}
                 modelVersion="v5.0"
+                explainHref={`/explain/${params.id}#${key}`}
+                riskDelta={riskDelta}
               />
             )
           })}

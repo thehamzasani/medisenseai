@@ -1,5 +1,5 @@
 import { AssessmentWithResults, RiskLevel } from '@/types'
-import { getRiskColor, getRiskLabel } from '@/lib/utils'
+import { getRiskColor, getRiskLabel, cn } from '@/lib/utils'
 
 interface RiskProfileGridProps {
   latestAssessment: AssessmentWithResults | null
@@ -155,8 +155,24 @@ export default function RiskProfileGrid({ latestAssessment }: RiskProfileGridPro
             <ProgressBar value={risk} level={level} />
 
             <div className="flex items-center justify-between">
-              <span className="text-headline-sm font-bold text-on-surface tabular-nums">
+              <span className="text-headline-sm font-bold text-on-surface tabular-nums inline-flex items-center gap-1.5">
                 {risk.toFixed(0)}%
+                {(() => {
+                  const rd = latestAssessment.riskDelta?.[disease.key as keyof typeof latestAssessment.riskDelta]
+                  if (!rd || rd.trend === 'stable') return null
+                  const isWorse = rd.trend === 'worsening'
+                  return (
+                    <span className={cn(
+                      'inline-flex items-center gap-0.5 text-[10px] font-semibold',
+                      isWorse ? 'text-error' : 'text-tertiary-fixed-dim',
+                    )}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 12 }}>
+                        {isWorse ? 'trending_up' : 'trending_down'}
+                      </span>
+                      {isWorse ? '+' : ''}{rd.delta.toFixed(1)}
+                    </span>
+                  )
+                })()}
               </span>
               <span className="text-[10px] text-on-surface-variant truncate max-w-[120px]">
                 Neural Network v5.0

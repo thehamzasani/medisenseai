@@ -148,6 +148,7 @@ export const URGENCY_CONFIG = {
 // ─── Nav Items ────────────────────────────────────────────────────────────────
 export const NAV_ITEMS = [
   { href: '/dashboard',       label: 'Dashboard',       icon: 'dashboard'      },
+  { href: '/coach',           label: 'Health Coach',    icon: 'favorite'       },
   { href: '/history',         label: 'History',         icon: 'history'        },
   { href: '/results',         label: 'AI Results',      icon: 'psychology'     },
   { href: '/engines',         label: 'Engine Results',  icon: 'biotech'        },

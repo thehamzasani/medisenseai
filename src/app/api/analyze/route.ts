@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server'
 import type { Prisma } from '@prisma/client'
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { runAllEngines, aggregateResults } from '@/lib/claude'
-import type { AssessmentInput, ApiResponse } from '@/types'
+import { runAllEngines, aggregateResults, computeExplainability } from '@/lib/claude'
+import type { AssessmentInput, ApiResponse, TrendDirection, RiskDelta } from '@/types'
 
 // type JsonInputValue =
 //   | string
@@ -118,13 +118,54 @@ export async function POST(request: Request) {
       symptoms: existing.symptoms,
     }
 
-    const engineResults = await runAllEngines(assessmentInput)
+    // ── Fetch previous completed assessment for adaptive risk monitoring ───
+    const prevAssessment = await db.assessment.findFirst({
+      where: {
+        userId: session.user.id,
+        id: { not: assessmentId },
+        analysisStatus: 'COMPLETE',
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        overallHealthIndex: true,
+        diabetesRisk: true,
+        heartDiseaseRisk: true,
+        hypertensionRisk: true,
+        strokeRisk: true,
+        kidneyDiseaseRisk: true,
+        liverDiseaseRisk: true,
+      },
+    })
+
+    const engineResults = await runAllEngines(assessmentInput, prevAssessment)
 
     engineResults.forEach(r => {
       console.log(`[analyze] Engine "${r.engine}" completed in ${r.inferenceMs}ms`)
     })
 
     const aggregate = aggregateResults(engineResults)
+    const explainability = computeExplainability(engineResults)
+
+    // ── Compute risk deltas from previous assessment ──────────────────────
+    const computeTrend = (prev: number | null, curr: number): { delta: number; trend: TrendDirection } => {
+      if (prev === null) return { delta: 0, trend: 'stable' }
+      const delta = Math.round((curr - prev) * 10) / 10
+      const absDelta = Math.abs(delta)
+      const trend: TrendDirection =
+        absDelta < 3 ? 'stable'
+        : delta > 0 ? 'worsening'
+        : 'improving'
+      return { delta, trend }
+    }
+
+    const riskDelta: RiskDelta = {
+      diabetes:      { current: aggregate.diabetesRisk,      previous: prevAssessment?.diabetesRisk      ?? 0, ...computeTrend(prevAssessment?.diabetesRisk      ?? null, aggregate.diabetesRisk)      },
+      heartDisease:  { current: aggregate.heartDiseaseRisk,  previous: prevAssessment?.heartDiseaseRisk  ?? 0, ...computeTrend(prevAssessment?.heartDiseaseRisk  ?? null, aggregate.heartDiseaseRisk)  },
+      hypertension:  { current: aggregate.hypertensionRisk,  previous: prevAssessment?.hypertensionRisk  ?? 0, ...computeTrend(prevAssessment?.hypertensionRisk  ?? null, aggregate.hypertensionRisk)  },
+      stroke:        { current: aggregate.strokeRisk,        previous: prevAssessment?.strokeRisk        ?? 0, ...computeTrend(prevAssessment?.strokeRisk        ?? null, aggregate.strokeRisk)        },
+      kidneyDisease: { current: aggregate.kidneyDiseaseRisk, previous: prevAssessment?.kidneyDiseaseRisk ?? 0, ...computeTrend(prevAssessment?.kidneyDiseaseRisk ?? null, aggregate.kidneyDiseaseRisk) },
+      liverDisease:  { current: aggregate.liverDiseaseRisk,  previous: prevAssessment?.liverDiseaseRisk  ?? 0, ...computeTrend(prevAssessment?.liverDiseaseRisk  ?? null, aggregate.liverDiseaseRisk)  },
+    }
 
     await db.assessment.update({
       where: { id: assessmentId },
@@ -151,11 +192,30 @@ export async function POST(request: Request) {
         keyFactors: aggregate.keyFactors,
         recommendations: aggregate.recommendations as unknown as Prisma.InputJsonValue,
         clinicalInsight: aggregate.clinicalInsight,
+        ensembleMetrics: aggregate.ensembleMetrics as unknown as Prisma.InputJsonValue,
+        explainability: explainability as unknown as Prisma.InputJsonValue,
+        riskDelta: riskDelta as unknown as Prisma.InputJsonValue,
 
         analysisStatus: 'COMPLETE',
         analysisError: null,
       },
     })
+
+    // Auto-create health goals from recommendations
+    if (aggregate.recommendations) {
+      const goals = createHealthGoals(session.user.id, assessmentId, aggregate)
+      for (const goal of goals) {
+        await db.healthGoal.create({ data: goal }).catch(e => console.error('[analyze] Failed to create goal:', e))
+      }
+      await db.coachInteraction.create({
+        data: {
+          userId: session.user.id,
+          type: 'recommendation',
+          content: `New health goals created from assessment analysis — ${goals.length} areas identified for improvement.`,
+          metadata: { assessmentId, goalCount: goals.length },
+        },
+      }).catch(e => console.error('[analyze] Failed to create coach interaction:', e))
+    }
 
     const totalMs = Date.now() - startTime
     console.log(`[analyze] Analysis complete for assessment ${assessmentId} in ${totalMs}ms`)
@@ -179,4 +239,99 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
+}
+
+// ─── Auto-create Health Goals from aggregate recommendations ─────────────────
+function createHealthGoals(
+  userId: string,
+  assessmentId: string,
+  aggregate: import('@/types').AggregateResult,
+): Array<Prisma.HealthGoalUncheckedCreateInput> {
+  const goals: Prisma.HealthGoalUncheckedCreateInput[] = []
+
+  const recs = aggregate.recommendations
+  if (!recs) return goals
+
+  // Medication goals
+  for (const med of recs.medications) {
+    if (med.action === 'ADD' || med.action === 'ADJUST') {
+      goals.push({
+        userId,
+        assessmentId,
+        category: 'medication',
+        title: `Take ${med.name}`,
+        description: `${med.dose}. Action: ${med.action}`,
+        targetValue: med.action === 'ADD' ? 'Started' : 'Adjusted',
+        unit: null,
+        adherenceLog: [] as unknown as Prisma.InputJsonValue,
+      })
+    }
+  }
+
+  // Lifestyle goals
+  const ls = recs.lifestyle
+  if (ls.sodiumReduction > 0) {
+    goals.push({
+      userId,
+      assessmentId,
+      category: 'diet',
+      title: 'Reduce Sodium Intake',
+      description: `Reduce daily sodium by ${ls.sodiumReduction}g per day`,
+      targetValue: `${ls.sodiumReduction}g reduction`,
+      unit: 'g',
+      adherenceLog: [] as unknown as Prisma.InputJsonValue,
+    })
+  }
+  if (ls.sleepIncrease > 0) {
+    goals.push({
+      userId,
+      assessmentId,
+      category: 'lifestyle',
+      title: 'Improve Sleep Duration',
+      description: `Increase sleep by ${ls.sleepIncrease} minutes per night`,
+      targetValue: `+${ls.sleepIncrease} min`,
+      unit: 'min',
+      adherenceLog: [] as unknown as Prisma.InputJsonValue,
+    })
+  }
+  if (ls.exerciseTarget) {
+    goals.push({
+      userId,
+      assessmentId,
+      category: 'exercise',
+      title: 'Reach Exercise Target',
+      description: ls.exerciseTarget,
+      targetValue: ls.exerciseTarget,
+      unit: null,
+      adherenceLog: [] as unknown as Prisma.InputJsonValue,
+    })
+  }
+  if (ls.sugarTarget) {
+    goals.push({
+      userId,
+      assessmentId,
+      category: 'diet',
+      title: 'Limit Added Sugar',
+      description: ls.sugarTarget,
+      targetValue: ls.sugarTarget,
+      unit: null,
+      adherenceLog: [] as unknown as Prisma.InputJsonValue,
+    })
+  }
+
+  // Care pathway monitoring goals
+  for (const step of recs.carePathway) {
+    goals.push({
+      userId,
+      assessmentId,
+      category: 'monitoring',
+      title: step.type,
+      description: step.notes,
+      targetValue: step.date,
+      unit: null,
+      adherenceLog: [] as unknown as Prisma.InputJsonValue,
+    })
+  }
+
+  return goals
 }

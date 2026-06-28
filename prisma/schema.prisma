@@ -44,7 +44,10 @@ model User {
   // Relations — all three required by NextAuth PrismaAdapter
   accounts    Account[]
   sessions    Session[]
-  assessments Assessment[]
+  assessments        Assessment[]
+  timelinePredictions TimelinePrediction[]
+  healthGoals        HealthGoal[]
+  coachInteractions  CoachInteraction[]
 
   @@index([email])
 }
@@ -165,10 +168,76 @@ model Assessment {
   recommendations Json?         // RecommendationsData — typed in src/types/index.ts
   clinicalInsight String?
 
+  // ── Hybrid Ensemble Metrics ──────────────────────────────────────────────
+  ensembleMetrics Json?         // EnsembleMetrics — typed in src/types/index.ts
+
+  // ── Explainable AI ───────────────────────────────────────────────────────
+  explainability Json?          // ExplainabilityData — per-disease attribution & feature importance
+
+  // ── Adaptive Risk Monitoring ─────────────────────────────────────────────
+  riskDelta Json?               // RiskDelta — per-disease deltas vs previous assessment
+
   analysisStatus String  @default("PENDING") // PENDING | RUNNING | COMPLETE | FAILED
   analysisError  String?
 
+  healthGoals HealthGoal[]
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+// ─── HEALTH GOALS (Preventive Health Coach) ──────────────────────────────────
+
+model HealthGoal {
+  id              String   @id @default(cuid())
+  userId          String
+  assessmentId    String
+  category        String   // "medication" | "lifestyle" | "exercise" | "diet" | "monitoring"
+  title           String
+  description     String
+  targetValue     String?
+  currentValue    String?
+  unit            String?
+  startDate       DateTime @default(now())
+  targetDate      DateTime?
+  completedAt     DateTime?
+  status          String   @default("active")  // "active" | "completed" | "missed" | "dismissed"
+  adherenceLog    Json?    // [{ date: string, value: string, note: string }]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assessment Assessment @relation(fields: [assessmentId], references: [id])
+
+  @@index([userId, status])
+}
+
+model CoachInteraction {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // "recommendation" | "check_in" | "progress_update" | "motivation" | "goal_created" | "goal_completed"
+  content   String
+  metadata  Json?    // flexible extra data
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+// ─── TIMELINE PREDICTION ──────────────────────────────────────────────────────
+// AI-generated health trajectory forecasts based on historical assessment trends.
+
+model TimelinePrediction {
+  id                String   @id @default(cuid())
+  userId            String
+  baseAssessmentId  String   // The most recent assessment used for this prediction
+  createdAt         DateTime @default(now())
+  predictedScores   Json     // Array of { date, overallHealthIndex, diabetesRisk, heartDiseaseRisk, ... }
+  confidenceInterval Json?   // { upper: [...], lower: [...] } matching predictedScores order
+  modelVersion      String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
 }

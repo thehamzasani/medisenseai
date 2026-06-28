@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { RISK_COLORS } from '@/constants'
-import type { AssessmentWithResults, EngineResult, RecommendationsData } from '@/types'
+import type { AssessmentWithResults, EngineResult, RecommendationsData, EnsembleMetrics, ExplainabilityData, RiskDelta } from '@/types'
 
 // ─── cn ───────────────────────────────────────────────────────────────────────
 export function cn(...inputs: ClassValue[]): string {
@@ -96,6 +96,15 @@ export function toAssessmentWithResults(row: any): AssessmentWithResults {
       : null,
     recommendations: row.recommendations
       ? (row.recommendations as unknown as RecommendationsData)
+      : null,
+    ensembleMetrics: row.ensembleMetrics
+      ? (row.ensembleMetrics as unknown as EnsembleMetrics)
+      : null,
+    explainability: row.explainability
+      ? (row.explainability as unknown as ExplainabilityData)
+      : null,
+    riskDelta: row.riskDelta
+      ? (row.riskDelta as unknown as RiskDelta)
       : null,
   }
 }

@@ -1,6 +1,7 @@
-import type { DiseaseRisk } from '@/types'
+import type { DiseaseRisk, TrendDirection } from '@/types'
 import RiskBadge from '@/components/shared/RiskBadge'
 import ProgressBar from '@/components/shared/ProgressBar'
+import RiskDeltaBadge from '@/components/risk/RiskDeltaBadge'
 import { cn } from '@/lib/utils'
 
 interface DiseasePredictionCardProps {
@@ -10,6 +11,8 @@ interface DiseasePredictionCardProps {
   modelName?: string
   modelVersion?: string
   wide?: boolean
+  explainHref?: string
+  riskDelta?: { delta: number; trend: TrendDirection } | null
 }
 
 const DISEASE_DESCRIPTIONS: Record<string, string> = {
@@ -28,6 +31,8 @@ export default function DiseasePredictionCard({
   modelName = 'Neural Network',
   modelVersion = 'v5.0',
   wide = false,
+  explainHref,
+  riskDelta,
 }: DiseasePredictionCardProps) {
   const riskValue = risk?.risk ?? 0
   const riskLevel = risk?.level ?? null
@@ -89,6 +94,11 @@ export default function DiseasePredictionCard({
         </span>
         <span className="text-on-surface-variant text-lg mb-1">%</span>
         <span className="text-label-sm text-on-surface-variant mb-1 ml-1">risk probability</span>
+        {riskDelta && (
+          <span className="mb-1 ml-auto">
+            <RiskDeltaBadge delta={riskDelta.delta} trend={riskDelta.trend} />
+          </span>
+        )}
       </div>
 
       {/* Progress bar */}
@@ -109,7 +119,7 @@ export default function DiseasePredictionCard({
         </span>
       </div>
 
-      {/* Hover reveal: model details + details button */}
+      {/* Hover reveal: model details + explain link */}
       <div className="overflow-hidden max-h-0 group-hover:max-h-20 transition-all duration-300 ease-out">
         <div className="pt-3 border-t border-outline-variant/20 flex items-center justify-between">
           <div className="text-[11px] text-on-surface-variant">
@@ -119,10 +129,17 @@ export default function DiseasePredictionCard({
             <span className="mx-1">·</span>
             <span>DeepSense Engine</span>
           </div>
-          <button className="text-[11px] font-semibold text-primary-fixed-dim hover:text-primary-fixed flex items-center gap-1 transition-colors">
-            Details
-            <span className="material-symbols-outlined" style={{ fontSize: 12 }}>arrow_forward</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {explainHref && (
+              <a
+                href={explainHref}
+                className="text-[11px] font-semibold text-primary-fixed-dim hover:text-primary-fixed flex items-center gap-1 transition-colors"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 12 }}>insights</span>
+                Why this prediction?
+              </a>
+            )}
+          </div>
         </div>
       </div>
     </div>

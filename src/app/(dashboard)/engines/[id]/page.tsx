@@ -8,6 +8,8 @@ import BestModelSpotlight from '@/components/engines/BestModelSpotlight'
 import EngineCard from '@/components/engines/EngineCard'
 import EngineMetricTable from '@/components/engines/EngineMetricTable'
 import EnginesPageFAB from '@/components/engines/EnginesPageFAB'
+import EnsembleWeightChart from '@/components/engines/EnsembleWeightChart'
+import AgreementMatrix from '@/components/engines/AgreementMatrix'
 
 interface Props {
   params: { id: string }
@@ -25,6 +27,7 @@ export default async function EnginesPage({ params }: Props) {
   if (raw.userId !== session.user.id) redirect('/dashboard')
 
   const assessment = toAssessmentWithResults(raw)
+  const hasEnsemble = assessment.analysisStatus === 'COMPLETE' && assessment.ensembleMetrics
 
   const engineResults = assessment.engineResults ?? []
   const bestEngineResult = engineResults.find(r => r.isBest)
@@ -64,6 +67,31 @@ export default async function EnginesPage({ params }: Props) {
         <BestModelSpotlight engineResult={bestEngineResult} />
       </div>
 
+      {/* ─── Hybrid AI Ensemble Section ──────────────────────────────────── */}
+      {hasEnsemble && (
+        <>
+          <div className="flex items-center gap-3 mb-5 mt-10">
+            <div className="h-px flex-1 bg-outline-variant/20" />
+            <span className="text-label-sm text-on-surface-variant uppercase tracking-widest px-3">
+              Hybrid AI Ensemble
+            </span>
+            <div className="h-px flex-1 bg-outline-variant/20" />
+          </div>
+
+          <div className="grid grid-cols-12 gap-6 mb-10">
+            <div className="col-span-12 lg:col-span-7">
+              <EnsembleWeightChart ensembleMetrics={assessment.ensembleMetrics!} />
+            </div>
+            <div className="col-span-12 lg:col-span-5">
+              <AgreementMatrix
+                ensembleMetrics={assessment.ensembleMetrics!}
+                engineCount={engineResults.length}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Section label */}
       <div className="flex items-center gap-3 mb-5">
         <div className="h-px flex-1 bg-outline-variant/20" />
@@ -79,7 +107,6 @@ export default async function EnginesPage({ params }: Props) {
           const result = engineResults.find(r => r.engine === def.name)
           const isDecisionTree = def.name === 'Decision Tree'
 
-          // Fallback result if analysis hasn't run yet
           const fallbackResult = {
             engine: def.name,
             accuracy: def.accuracy,

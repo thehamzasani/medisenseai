@@ -118,7 +118,7 @@ export default function TopNav() {
               </div>
               <div className="border-t border-outline-variant/10 py-1">
                 <button
-                  onClick={() => signOut({ callbackUrl: '/login' })}
+                  onClick={() => signOut({ redirect: false }).then(() => { window.location.href = '/login' })}
                   className="flex items-center gap-2 px-4 py-2 text-label-sm text-error hover:bg-error/10 transition-colors w-full text-left"
                 >
                   <span className="material-symbols-outlined text-[16px]">logout</span>

@@ -1,5 +1,3 @@
-import { redirect } from 'next/navigation'
-import { auth } from '@/lib/auth'
 import Sidebar from '@/components/layout/Sidebar'
 import TopNav from '@/components/layout/TopNav'
 
@@ -8,12 +6,6 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const session = await auth()
-
-  if (!session?.user) {
-    redirect('/login')
-  }
-
   return (
     <div className="min-h-screen bg-background">
       {/* Atmospheric background blur circles */}

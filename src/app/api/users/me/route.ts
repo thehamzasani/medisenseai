@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { auth } from '@/lib/auth'
+import { getCurrentUserForApi, ANON_COOKIE, ANON_COOKIE_OPTIONS } from '@/lib/anonymous'
 import { db } from '@/lib/db'
 import type { ApiResponse, UserProfile } from '@/types'
 
@@ -15,13 +15,13 @@ const userProfileSchema = z.object({
 
 export async function GET(): Promise<NextResponse<ApiResponse<UserProfile>>> {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { user: anonUser, isNew, anonId } = await getCurrentUserForApi()
+    if (!anonUser) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
     const user = await db.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: anonUser.id },
       select: {
         id:          true,
         name:        true,
@@ -53,7 +53,9 @@ export async function GET(): Promise<NextResponse<ApiResponse<UserProfile>>> {
       assessmentCount: user._count.assessments,
     }
 
-    return NextResponse.json({ success: true, data: profile })
+    const res = NextResponse.json({ success: true, data: profile })
+    if (isNew) res.cookies.set(ANON_COOKIE, anonId, ANON_COOKIE_OPTIONS)
+    return res
   } catch (error) {
     console.error('[GET /api/users/me]', error)
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
@@ -63,8 +65,8 @@ export async function GET(): Promise<NextResponse<ApiResponse<UserProfile>>> {
 
 export async function PATCH(request: Request): Promise<NextResponse<ApiResponse<UserProfile>>> {
   try {
-    const session = await auth()
-    if (!session?.user?.id) {
+    const { user: anonUser, isNew, anonId } = await getCurrentUserForApi()
+    if (!anonUser) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -96,7 +98,7 @@ export async function PATCH(request: Request): Promise<NextResponse<ApiResponse<
     }
 
     const updated = await db.user.update({
-      where: { id: session.user.id },
+      where: { id: anonUser.id },
       data:  updateData,
       select: {
         id:          true,
@@ -125,7 +127,9 @@ export async function PATCH(request: Request): Promise<NextResponse<ApiResponse<
       assessmentCount: updated._count.assessments,
     }
 
-    return NextResponse.json({ success: true, data: profile })
+    const res = NextResponse.json({ success: true, data: profile })
+    if (isNew) res.cookies.set(ANON_COOKIE, anonId, ANON_COOKIE_OPTIONS)
+    return res
   } catch (error) {
     console.error('[PATCH /api/users/me]', error)
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })

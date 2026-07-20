@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { auth } from '@/lib/auth'
+import { getCurrentUserForApi, ANON_COOKIE, ANON_COOKIE_OPTIONS } from '@/lib/anonymous'
 import { db } from '@/lib/db'
 import type { ApiResponse, AssessmentListItem, AnalysisStatus, RiskLevel } from '@/types'
 import { assessmentSchema } from '@/lib/validations'
@@ -62,13 +62,13 @@ export type AssessmentFormData = z.infer<typeof assessmentSchema>
 
 // ─── GET: list user's assessments ─────────────────────────────────────────────
 export async function GET() {
-  const session = await auth()
-  if (!session?.user) {
+  const { user, isNew, anonId } = await getCurrentUserForApi()
+  if (!user) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
   const rows = await db.assessment.findMany({
-    where: { userId: session.user.id },
+    where: { userId: user.id },
     orderBy: { createdAt: 'desc' },
     select: {
       id: true,
@@ -105,13 +105,15 @@ export async function GET() {
 }))
 
   const response: ApiResponse<AssessmentListItem[]> = { success: true, data }
-  return NextResponse.json(response)
+  const res = NextResponse.json(response)
+  if (isNew) res.cookies.set(ANON_COOKIE, anonId, ANON_COOKIE_OPTIONS)
+  return res
 }
 
 // ─── POST: create a new assessment ────────────────────────────────────────────
 export async function POST(request: Request) {
-  const session = await auth()
-  if (!session?.user) {
+  const { user, isNew, anonId } = await getCurrentUserForApi()
+  if (!user) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -132,7 +134,7 @@ export async function POST(request: Request) {
 
   const created = await db.assessment.create({
     data: {
-      userId: session.user.id,
+      userId: user.id,
       label: input.label ?? null,
 
       age: input.age,
@@ -183,5 +185,7 @@ export async function POST(request: Request) {
   })
 
   const response: ApiResponse<{ id: string }> = { success: true, data: { id: created.id } }
-  return NextResponse.json(response, { status: 201 })
+  const res = NextResponse.json(response, { status: 201 })
+  if (isNew) res.cookies.set(ANON_COOKIE, anonId, ANON_COOKIE_OPTIONS)
+  return res
 }

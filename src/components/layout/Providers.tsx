@@ -1,11 +1,12 @@
 'use client'
 
-import { SessionProvider } from 'next-auth/react'
 import { Toaster } from 'sonner'
+import AnonymousInit from './AnonymousInit'
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider>
+    <>
+      <AnonymousInit />
       {children}
       <Toaster
         position="top-right"
@@ -19,6 +20,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           },
         }}
       />
-    </SessionProvider>
+    </>
   )
 }

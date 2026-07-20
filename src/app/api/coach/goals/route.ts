@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { getCurrentUserForApi, ANON_COOKIE, ANON_COOKIE_OPTIONS } from '@/lib/anonymous'
 import { db } from '@/lib/db'
 import type { HealthGoalData, GoalStatus, GoalCategory, AdherenceEntry } from '@/types'
 
 export async function GET() {
-  const session = await auth()
-  if (!session?.user) {
+  const { user, isNew, anonId } = await getCurrentUserForApi()
+  if (!user) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
   const goals = await db.healthGoal.findMany({
-    where: { userId: session.user.id },
+    where: { userId: user.id },
     orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
   })
 
@@ -33,12 +33,14 @@ export async function GET() {
     updatedAt: g.updatedAt.toISOString(),
   }))
 
-  return NextResponse.json({ success: true, data })
+  const getRes = NextResponse.json({ success: true, data })
+  if (isNew) getRes.cookies.set(ANON_COOKIE, anonId, ANON_COOKIE_OPTIONS)
+  return getRes
 }
 
 export async function POST(request: Request) {
-  const session = await auth()
-  if (!session?.user) {
+  const { user, isNew, anonId } = await getCurrentUserForApi()
+  if (!user) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -59,7 +61,7 @@ export async function POST(request: Request) {
 
   const goal = await db.healthGoal.create({
     data: {
-      userId: session.user.id,
+      userId: user.id,
       assessmentId: body.assessmentId,
       category: body.category,
       title: body.title,
@@ -71,8 +73,10 @@ export async function POST(request: Request) {
     },
   })
 
-  return NextResponse.json({
+  const postRes = NextResponse.json({
     success: true,
     data: { id: goal.id },
   })
+  if (isNew) postRes.cookies.set(ANON_COOKIE, anonId, ANON_COOKIE_OPTIONS)
+  return postRes
 }

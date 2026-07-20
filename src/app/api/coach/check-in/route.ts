@@ -1,20 +1,20 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { getCurrentUserForApi, ANON_COOKIE, ANON_COOKIE_OPTIONS } from '@/lib/anonymous'
 import { db } from '@/lib/db'
 import { generateCoachMessage } from '@/lib/coach'
 import type { CoachInteractionData } from '@/types'
 
 export async function POST() {
-  const session = await auth()
-  if (!session?.user) {
+  const { user, isNew, anonId } = await getCurrentUserForApi()
+  if (!user) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
-  const user = await db.user.findUnique({ where: { id: session.user.id } })
-  const userName = user?.name ?? 'Patient'
+  const dbUser = await db.user.findUnique({ where: { id: user.id } })
+  const userName = dbUser?.name ?? 'Patient'
 
   const goals = await db.healthGoal.findMany({
-    where: { userId: session.user.id },
+    where: { userId: user.id },
     orderBy: { createdAt: 'desc' },
   })
 
@@ -25,7 +25,7 @@ export async function POST() {
   const streakDays = goals.filter(g => g.status === 'completed').length
 
   const assessments = await db.assessment.findMany({
-    where: { userId: session.user.id, analysisStatus: 'COMPLETE' },
+    where: { userId: user.id, analysisStatus: 'COMPLETE' },
     orderBy: { createdAt: 'desc' },
     take: 2,
   })
@@ -43,7 +43,7 @@ export async function POST() {
 
   const interaction = await db.coachInteraction.create({
     data: {
-      userId: session.user.id,
+      userId: user.id,
       type: 'check_in',
       content: message,
       metadata: { generatedAt: new Date().toISOString() },
@@ -59,17 +59,19 @@ export async function POST() {
     createdAt: interaction.createdAt.toISOString(),
   }
 
-  return NextResponse.json({ success: true, data })
+  const postRes = NextResponse.json({ success: true, data })
+  if (isNew) postRes.cookies.set(ANON_COOKIE, anonId, ANON_COOKIE_OPTIONS)
+  return postRes
 }
 
 export async function GET() {
-  const session = await auth()
-  if (!session?.user) {
+  const { user, isNew, anonId } = await getCurrentUserForApi()
+  if (!user) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
   const interactions = await db.coachInteraction.findMany({
-    where: { userId: session.user.id },
+    where: { userId: user.id },
     orderBy: { createdAt: 'desc' },
     take: 20,
   })
@@ -83,5 +85,7 @@ export async function GET() {
     createdAt: i.createdAt.toISOString(),
   }))
 
-  return NextResponse.json({ success: true, data })
+  const getRes = NextResponse.json({ success: true, data })
+  if (isNew) getRes.cookies.set(ANON_COOKIE, anonId, ANON_COOKIE_OPTIONS)
+  return getRes
 }

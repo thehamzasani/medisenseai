@@ -1,10 +1,7 @@
 import { PrismaClient } from '@prisma/client'
-import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
-// ─── Helper: build a full 10-engine result array ─────────────────────────────
-// Base values come from Neural Network; each other engine applies a variance offset.
 function buildEngineResults(
   nnDiabetes: number,
   nnHeart: number,
@@ -82,7 +79,6 @@ function buildEngineResults(
   })
 }
 
-// ─── Helper: build RecommendationsData ───────────────────────────────────────
 function buildRecommendations(
   directiveTitle: string,
   directiveDescription: string,
@@ -143,10 +139,7 @@ function buildRecommendations(
 }
 
 async function main() {
-  console.log('🌱  Seeding MediSense AI database…')
-
-  // ── Demo user ──────────────────────────────────────────────────────────────
-  const hashedPassword = await bcrypt.hash('Demo@123456', 12)
+  console.log('Seeding MediSense AI database...')
 
   const user = await prisma.user.upsert({
     where:  { email: 'demo@medisense.ai' },
@@ -154,23 +147,17 @@ async function main() {
     create: {
       name:      'Dr. Hamza Sani',
       email:     'demo@medisense.ai',
-      password:  hashedPassword,
       bloodType: 'O+',
       gender:    'Male',
       dateOfBirth: new Date('1982-03-15'),
     },
   })
 
-  console.log(`✅  User created: ${user.email}`)
+  console.log(`User created: ${user.email}`)
 
-  // ── Delete existing assessments for idempotent re-seeding ─────────────────
   await prisma.assessment.deleteMany({ where: { userId: user.id } })
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // ASSESSMENT 1 — Moderate Risk (overallHealthIndex: 72)
-  // Patient: age 42, male, BMI 26.5, glucose 115, BP 128/84, HbA1c 6.1%
-  // ══════════════════════════════════════════════════════════════════════════
-
+  // Assessment 1 — Moderate Risk
   const a1KeyFactors = [
     'Fasting glucose 115 mg/dL — pre-diabetic range',
     'Family history of diabetes',
@@ -184,67 +171,45 @@ async function main() {
   const a1Recommendations = buildRecommendations(
     'Manage Elevated Diabetes Risk',
     'Pre-diabetic indicators combined with elevated blood pressure require immediate lifestyle intervention. A structured diet and exercise programme should be initiated within two weeks.',
-    6,
-    62, 55, 38,
+    6, 62, 55, 38,
   )
 
-  const assessment1 = await prisma.assessment.create({
+  await prisma.assessment.create({
     data: {
-      userId:    user.id,
+      userId: user.id,
       createdAt: new Date('2026-05-01T08:00:00Z'),
-      label:     'Routine Metabolic Screening',
-
-      // Personal
+      label: 'Routine Metabolic Screening',
       age: 42, gender: 'Male', weight: 78, height: 171.5, bmi: 26.5,
-
-      // Vitals
       systolicBP: 128, diastolicBP: 84, heartRate: 74, oxygenSat: 97.5,
       bodyTemperature: 36.8, respiratoryRate: 16,
-
-      // Labs
       fastingGlucose: 115, hba1c: 6.1, cholesterol: 202, hdl: 48, ldl: 128,
       triglycerides: 168, creatinine: 1.0, egfr: 82, altEnzyme: 32, vitaminD: 22,
-
-      // Lifestyle
       isSmoker: false, alcoholUse: false, isSedentary: false,
       exerciseFrequency: '1-2x', sleepHours: 6.5, stressLevel: 'moderate',
       dailySugarIntake: 'moderate', highSaltDiet: false,
-
-      // Family history
       hasDiabetesFH: true, hasHeartDiseaseFH: false, hasHypertensionFH: true,
       hasStrokeFH: false, hasKidneyDiseaseFH: false, hasCancerFH: false,
-
-      // Symptoms
       symptoms: ['fatigue', 'frequent_urination'],
-
-      // AI Results
-      analysisStatus:    'COMPLETE',
-      engineResults:     a1EngineResults,
-      bestEngine:        'Neural Network',
+      analysisStatus: 'COMPLETE',
+      engineResults: a1EngineResults,
+      bestEngine: 'Neural Network',
       overallHealthIndex: 72,
-
-      // Aggregated (Neural Network values)
-      diabetesRisk:       62, diabetesLevel:       'MEDIUM',
-      heartDiseaseRisk:   38, heartDiseaseLevel:   'LOW',
-      hypertensionRisk:   55, hypertensionLevel:   'MEDIUM',
-      strokeRisk:         22, strokeLevel:         'LOW',
-      kidneyDiseaseRisk:  18, kidneyDiseaseLevel:  'LOW',
-      liverDiseaseRisk:   12, liverDiseaseLevel:   'LOW',
-
-      urgency:         'WATCH',
-      urgencyText:     'Your results warrant closer monitoring. Schedule a checkup.',
-      keyFactors:      a1KeyFactors,
+      diabetesRisk: 62, diabetesLevel: 'MEDIUM',
+      heartDiseaseRisk: 38, heartDiseaseLevel: 'LOW',
+      hypertensionRisk: 55, hypertensionLevel: 'MEDIUM',
+      strokeRisk: 22, strokeLevel: 'LOW',
+      kidneyDiseaseRisk: 18, kidneyDiseaseLevel: 'LOW',
+      liverDiseaseRisk: 12, liverDiseaseLevel: 'LOW',
+      urgency: 'WATCH',
+      urgencyText: 'Your results warrant closer monitoring. Schedule a checkup.',
+      keyFactors: a1KeyFactors,
       clinicalInsight: a1Insight,
       recommendations: a1Recommendations,
     },
   })
-  console.log(`✅  Assessment 1 created: ${assessment1.id} (overallHealthIndex: 72)`)
+  console.log('Assessment 1 created (overallHealthIndex: 72)')
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // ASSESSMENT 2 — Lower Risk (overallHealthIndex: 84)
-  // Patient: age 35, female, BMI 25.1, glucose 99, BP 118/76, HbA1c 5.2%
-  // ══════════════════════════════════════════════════════════════════════════
-
+  // Assessment 2 — Lower Risk
   const a2KeyFactors = [
     'All metabolic markers within normal range',
     'Healthy BMI and cardiovascular profile',
@@ -258,68 +223,45 @@ async function main() {
   const a2Recommendations = buildRecommendations(
     'Maintain Cardiovascular Wellness',
     'All indicators point to excellent baseline health. Continue current lifestyle practices and maintain annual screening schedule.',
-    2,
-    28, 32, 18,
+    2, 28, 32, 18,
   )
 
-  const assessment2 = await prisma.assessment.create({
+  await prisma.assessment.create({
     data: {
-      userId:    user.id,
+      userId: user.id,
       createdAt: new Date('2026-05-15T10:00:00Z'),
-      label:     'Annual Wellness Check',
-
-      // Personal
+      label: 'Annual Wellness Check',
       age: 35, gender: 'Female', weight: 62, height: 157, bmi: 25.1,
-
-      // Vitals
       systolicBP: 118, diastolicBP: 76, heartRate: 68, oxygenSat: 98.5,
       bodyTemperature: 36.6, respiratoryRate: 14,
-
-      // Labs
       fastingGlucose: 99, hba1c: 5.2, cholesterol: 175, hdl: 62, ldl: 98,
       triglycerides: 105, creatinine: 0.8, egfr: 98, altEnzyme: 22, vitaminD: 38,
-
-      // Lifestyle
       isSmoker: false, alcoholUse: false, isSedentary: false,
       exerciseFrequency: '3-4x', sleepHours: 7.5, stressLevel: 'low',
       dailySugarIntake: 'low', highSaltDiet: false,
-
-      // Family history
       hasDiabetesFH: false, hasHeartDiseaseFH: false, hasHypertensionFH: false,
       hasStrokeFH: false, hasKidneyDiseaseFH: false, hasCancerFH: false,
-
-      // Symptoms
       symptoms: [],
-
-      // AI Results
-      analysisStatus:    'COMPLETE',
-      engineResults:     a2EngineResults,
-      bestEngine:        'Neural Network',
+      analysisStatus: 'COMPLETE',
+      engineResults: a2EngineResults,
+      bestEngine: 'Neural Network',
       overallHealthIndex: 84,
-
-      // Aggregated (Neural Network values)
-      diabetesRisk:       28, diabetesLevel:       'LOW',
-      heartDiseaseRisk:   18, heartDiseaseLevel:   'LOW',
-      hypertensionRisk:   32, hypertensionLevel:   'LOW',
-      strokeRisk:         10, strokeLevel:         'LOW',
-      kidneyDiseaseRisk:  12, kidneyDiseaseLevel:  'LOW',
-      liverDiseaseRisk:    8, liverDiseaseLevel:   'LOW',
-
-      urgency:         'MONITOR',
-      urgencyText:     'Maintain healthy habits and continue routine monitoring.',
-      keyFactors:      a2KeyFactors,
+      diabetesRisk: 28, diabetesLevel: 'LOW',
+      heartDiseaseRisk: 18, heartDiseaseLevel: 'LOW',
+      hypertensionRisk: 32, hypertensionLevel: 'LOW',
+      strokeRisk: 10, strokeLevel: 'LOW',
+      kidneyDiseaseRisk: 12, kidneyDiseaseLevel: 'LOW',
+      liverDiseaseRisk: 8, liverDiseaseLevel: 'LOW',
+      urgency: 'MONITOR',
+      urgencyText: 'Maintain healthy habits and continue routine monitoring.',
+      keyFactors: a2KeyFactors,
       clinicalInsight: a2Insight,
       recommendations: a2Recommendations,
     },
   })
-  console.log(`✅  Assessment 2 created: ${assessment2.id} (overallHealthIndex: 84)`)
+  console.log('Assessment 2 created (overallHealthIndex: 84)')
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // ASSESSMENT 3 — Higher Risk (overallHealthIndex: 58)
-  // Patient: age 56, male, BMI 28.3, glucose 132, BP 142/92, HbA1c 6.8%
-  // Smoker, alcohol use, sedentary, high salt, FH: diabetes + heart + hypertension
-  // ══════════════════════════════════════════════════════════════════════════
-
+  // Assessment 3 — Higher Risk
   const a3KeyFactors = [
     'Fasting glucose 132 mg/dL — diabetic range',
     'HbA1c 6.8% — diagnostic threshold for diabetes',
@@ -334,73 +276,50 @@ async function main() {
   const a3Recommendations = buildRecommendations(
     'Manage Elevated Diabetes & Hypertension Risk',
     'Critical convergence of metabolic and cardiovascular risk factors detected. Immediate pharmacological review and intensive lifestyle intervention programme initiation are required within the next two weeks.',
-    8,
-    78, 74, 65,
+    8, 78, 74, 65,
   )
 
-  const assessment3 = await prisma.assessment.create({
+  await prisma.assessment.create({
     data: {
-      userId:    user.id,
+      userId: user.id,
       createdAt: new Date('2026-06-01T09:00:00Z'),
-      label:     'Comprehensive Cardiac Risk Assessment',
-
-      // Personal
+      label: 'Comprehensive Cardiac Risk Assessment',
       age: 56, gender: 'Male', weight: 88, height: 176.4, bmi: 28.3,
-
-      // Vitals
       systolicBP: 142, diastolicBP: 92, heartRate: 82, oxygenSat: 96.0,
       bodyTemperature: 37.1, respiratoryRate: 18,
-
-      // Labs
       fastingGlucose: 132, hba1c: 6.8, cholesterol: 228, hdl: 38, ldl: 148,
       triglycerides: 242, creatinine: 1.2, egfr: 68, altEnzyme: 48, vitaminD: 16,
-
-      // Lifestyle
       isSmoker: true, alcoholUse: true, isSedentary: true,
       exerciseFrequency: 'none', sleepHours: 5.5, stressLevel: 'high',
       dailySugarIntake: 'high', highSaltDiet: true,
-
-      // Family history
       hasDiabetesFH: true, hasHeartDiseaseFH: true, hasHypertensionFH: true,
       hasStrokeFH: false, hasKidneyDiseaseFH: false, hasCancerFH: false,
-
-      // Symptoms
       symptoms: ['fatigue', 'frequent_urination', 'excessive_thirst', 'shortness_of_breath', 'headache'],
-
-      // AI Results
-      analysisStatus:    'COMPLETE',
-      engineResults:     a3EngineResults,
-      bestEngine:        'Neural Network',
+      analysisStatus: 'COMPLETE',
+      engineResults: a3EngineResults,
+      bestEngine: 'Neural Network',
       overallHealthIndex: 58,
-
-      // Aggregated (Neural Network values)
-      diabetesRisk:       78, diabetesLevel:       'HIGH',
-      heartDiseaseRisk:   65, heartDiseaseLevel:   'MEDIUM',
-      hypertensionRisk:   74, hypertensionLevel:   'HIGH',
-      strokeRisk:         42, strokeLevel:         'MEDIUM',
-      kidneyDiseaseRisk:  38, kidneyDiseaseLevel:  'LOW',
-      liverDiseaseRisk:   28, liverDiseaseLevel:   'LOW',
-
-      urgency:         'SOON',
-      urgencyText:     'Several risk factors identified. Schedule a checkup within 2–4 weeks.',
-      keyFactors:      a3KeyFactors,
+      diabetesRisk: 78, diabetesLevel: 'HIGH',
+      heartDiseaseRisk: 65, heartDiseaseLevel: 'MEDIUM',
+      hypertensionRisk: 74, hypertensionLevel: 'HIGH',
+      strokeRisk: 42, strokeLevel: 'MEDIUM',
+      kidneyDiseaseRisk: 38, kidneyDiseaseLevel: 'LOW',
+      liverDiseaseRisk: 28, liverDiseaseLevel: 'LOW',
+      urgency: 'SOON',
+      urgencyText: 'Several risk factors identified. Schedule a checkup within 2\u20134 weeks.',
+      keyFactors: a3KeyFactors,
       clinicalInsight: a3Insight,
       recommendations: a3Recommendations,
     },
   })
-  console.log(`✅  Assessment 3 created: ${assessment3.id} (overallHealthIndex: 58)`)
+  console.log('Assessment 3 created (overallHealthIndex: 58)')
 
-  console.log('\n🎉  Seeding complete!')
-  console.log('────────────────────────────────────────')
-  console.log('  Demo credentials:')
-  console.log('  Email:    demo@medisense.ai')
-  console.log('  Password: Demo@123456')
-  console.log('────────────────────────────────────────')
+  console.log('Seeding complete!')
 }
 
 main()
   .catch((e) => {
-    console.error('❌  Seed failed:', e)
+    console.error('Seed failed:', e)
     process.exit(1)
   })
   .finally(async () => {

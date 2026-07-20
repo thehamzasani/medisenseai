@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { Prisma } from '@prisma/client'
-import { auth } from '@/lib/auth'
+import { getCurrentUserForApi, ANON_COOKIE, ANON_COOKIE_OPTIONS } from '@/lib/anonymous'
 import { db } from '@/lib/db'
 import type { AdherenceEntry } from '@/types'
 
@@ -8,13 +8,13 @@ export async function PATCH(
   request: Request,
   { params }: { params: { id: string } },
 ) {
-  const session = await auth()
-  if (!session?.user) {
+  const { user, isNew, anonId } = await getCurrentUserForApi()
+  if (!user) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
   const goal = await db.healthGoal.findUnique({ where: { id: params.id } })
-  if (!goal || goal.userId !== session.user.id) {
+  if (!goal || goal.userId !== user.id) {
     return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 })
   }
 
@@ -57,7 +57,7 @@ export async function PATCH(
   if (body.status === 'completed') {
     await db.coachInteraction.create({
       data: {
-        userId: session.user.id,
+        userId: user.id,
         type: 'goal_completed',
         content: `Goal completed: ${goal.title}`,
         metadata: { goalId: params.id, goalTitle: goal.title },
@@ -65,5 +65,7 @@ export async function PATCH(
     })
   }
 
-  return NextResponse.json({ success: true })
+  const res = NextResponse.json({ success: true })
+  if (isNew) res.cookies.set(ANON_COOKIE, anonId, ANON_COOKIE_OPTIONS)
+  return res
 }

@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { getCurrentUserForApi, ANON_COOKIE, ANON_COOKIE_OPTIONS } from '@/lib/anonymous'
 import { db } from '@/lib/db'
 import type { CoachProgressData } from '@/types'
 
 export async function GET() {
-  const session = await auth()
-  if (!session?.user) {
+  const { user, isNew, anonId } = await getCurrentUserForApi()
+  if (!user) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
   const goals = await db.healthGoal.findMany({
-    where: { userId: session.user.id },
+    where: { userId: user.id },
   })
 
   const completedGoals = goals.filter(g => g.status === 'completed').length
@@ -38,7 +38,7 @@ export async function GET() {
 
   // Get latest 2 completed assessments for health comparison
   const assessments = await db.assessment.findMany({
-    where: { userId: session.user.id, analysisStatus: 'COMPLETE' },
+    where: { userId: user.id, analysisStatus: 'COMPLETE' },
     orderBy: { createdAt: 'desc' },
     take: 2,
   })
@@ -76,5 +76,7 @@ export async function GET() {
     biomarkerChanges,
   }
 
-  return NextResponse.json({ success: true, data: progress })
+  const res = NextResponse.json({ success: true, data: progress })
+  if (isNew) res.cookies.set(ANON_COOKIE, anonId, ANON_COOKIE_OPTIONS)
+  return res
 }

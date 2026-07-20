@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
 import type { Prisma } from '@prisma/client'
-import { auth } from '@/lib/auth'
+import { getCurrentUserForApi, ANON_COOKIE, ANON_COOKIE_OPTIONS } from '@/lib/anonymous'
 import { db } from '@/lib/db'
 import { predictTimeline } from '@/lib/timeline'
 import type { AssessmentHistoryPoint, ApiResponse, TimelinePredictionData } from '@/types'
 
 export async function POST(request: Request) {
-  const session = await auth()
-  if (!session?.user) {
+  const { user, isNew, anonId } = await getCurrentUserForApi()
+  if (!user) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
   // Verify assessment belongs to user
   const assessment = await db.assessment.findUnique({ where: { id: assessmentId } })
-  if (!assessment || assessment.userId !== session.user.id) {
+  if (!assessment || assessment.userId !== user.id) {
     return NextResponse.json({ success: false, error: 'Assessment not found' }, { status: 404 })
   }
 
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
   try {
     // Fetch all completed assessments for this user (ordered by date)
     const allAssessments = await db.assessment.findMany({
-      where: { userId: session.user.id, analysisStatus: 'COMPLETE' },
+      where: { userId: user.id, analysisStatus: 'COMPLETE' },
       orderBy: { createdAt: 'asc' },
     })
 
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     // Store in database
     await db.timelinePrediction.create({
       data: {
-        userId: session.user.id,
+        userId: user.id,
         baseAssessmentId: assessmentId,
         predictedScores: prediction.predictedScores as unknown as Prisma.InputJsonValue,
         confidenceInterval: prediction.confidenceInterval as unknown as Prisma.InputJsonValue,
@@ -70,7 +70,9 @@ export async function POST(request: Request) {
       data: prediction,
     }
 
-    return NextResponse.json(response)
+    const res = NextResponse.json(response)
+    if (isNew) res.cookies.set(ANON_COOKIE, anonId, ANON_COOKIE_OPTIONS)
+    return res
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error during timeline prediction'
     console.error('[predict-timeline] Error:', message)
@@ -80,8 +82,8 @@ export async function POST(request: Request) {
 
 // GET: fetch the most recent timeline prediction for an assessment
 export async function GET(request: Request) {
-  const session = await auth()
-  if (!session?.user) {
+  const { user, isNew, anonId } = await getCurrentUserForApi()
+  if (!user) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -94,7 +96,7 @@ export async function GET(request: Request) {
 
   const prediction = await db.timelinePrediction.findFirst({
     where: {
-      userId: session.user.id,
+      userId: user.id,
       baseAssessmentId: assessmentId,
     },
     orderBy: { createdAt: 'desc' },
@@ -113,5 +115,7 @@ export async function GET(request: Request) {
     projectionMonths: (prediction.predictedScores as unknown as TimelinePredictionData['predictedScores']).length,
   }
 
-  return NextResponse.json({ success: true, data })
+  const res = NextResponse.json({ success: true, data })
+  if (isNew) res.cookies.set(ANON_COOKIE, anonId, ANON_COOKIE_OPTIONS)
+  return res
 }

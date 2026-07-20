@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { Prisma } from '@prisma/client'
-import { auth } from '@/lib/auth'
+import { getCurrentUserForApi, ANON_COOKIE, ANON_COOKIE_OPTIONS } from '@/lib/anonymous'
 import { db } from '@/lib/db'
 import { runAllEngines, aggregateResults, computeExplainability } from '@/lib/claude'
 import type { AssessmentInput, ApiResponse, TrendDirection, RiskDelta } from '@/types'
@@ -32,8 +32,8 @@ function checkRateLimit(userId: string): boolean {
 }
 
 export async function POST(request: Request) {
-  const session = await auth()
-  if (!session?.user) {
+  const { user, isNew, anonId } = await getCurrentUserForApi()
+  if (!user) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'assessmentId is required' }, { status: 400 })
   }
 
-  if (!checkRateLimit(session.user.id)) {
+  if (!checkRateLimit(user.id)) {
     return NextResponse.json(
       {
         success: false,
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'Assessment not found' }, { status: 404 })
   }
 
-  if (existing.userId !== session.user.id) {
+  if (existing.userId !== user.id) {
     return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
   }
 
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
     // ── Fetch previous completed assessment for adaptive risk monitoring ───
     const prevAssessment = await db.assessment.findFirst({
       where: {
-        userId: session.user.id,
+        userId: user.id,
         id: { not: assessmentId },
         analysisStatus: 'COMPLETE',
       },
@@ -203,13 +203,13 @@ export async function POST(request: Request) {
 
     // Auto-create health goals from recommendations
     if (aggregate.recommendations) {
-      const goals = createHealthGoals(session.user.id, assessmentId, aggregate)
+      const goals = createHealthGoals(user.id, assessmentId, aggregate)
       for (const goal of goals) {
         await db.healthGoal.create({ data: goal }).catch(e => console.error('[analyze] Failed to create goal:', e))
       }
       await db.coachInteraction.create({
         data: {
-          userId: session.user.id,
+        userId: user.id,
           type: 'recommendation',
           content: `New health goals created from assessment analysis — ${goals.length} areas identified for improvement.`,
           metadata: { assessmentId, goalCount: goals.length },
@@ -224,7 +224,9 @@ export async function POST(request: Request) {
       success: true,
       data: { assessmentId, status: 'COMPLETE' },
     }
-    return NextResponse.json(response)
+    const res = NextResponse.json(response)
+    if (isNew) res.cookies.set(ANON_COOKIE, anonId, ANON_COOKIE_OPTIONS)
+    return res
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error during analysis'
     console.error(`[analyze] Analysis failed for assessment ${assessmentId}:`, message)

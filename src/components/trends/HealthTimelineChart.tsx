@@ -211,7 +211,7 @@ export default function HealthTimelineChart({
             return (
               <g key={`hist-${i}`}>
                 <rect x={cx - 20} y={padT} width={40} height={chartH} fill="transparent" onMouseEnter={() => setHoveredIdx(i)} style={{ cursor: 'crosshair' }} />
-                <circle cx={cx} cy={cy} r={isHovered ? 6 : 3} fill={metric.color} stroke="#151b2d" strokeWidth="2" />
+                <circle cx={cx} cy={cy} r={isHovered ? 6 : 3} fill={metric.color} stroke="#e0e0e0" strokeWidth="2" />
               </g>
             )
           })}
@@ -225,7 +225,7 @@ export default function HealthTimelineChart({
             return (
               <g key={`pred-${i}`}>
                 <rect x={cx - 20} y={padT} width={40} height={chartH} fill="transparent" onMouseEnter={() => setHoveredIdx(idx)} style={{ cursor: 'crosshair' }} />
-                <circle cx={cx} cy={cy} r={isHovered ? 6 : 4} fill={metric.color} stroke="#151b2d" strokeWidth="2" opacity={0.85} />
+                <circle cx={cx} cy={cy} r={isHovered ? 6 : 4} fill={metric.color} stroke="#e0e0e0" strokeWidth="2" opacity={0.85} />
               </g>
             )
           })}
@@ -261,7 +261,7 @@ export default function HealthTimelineChart({
                 <text x={tooltipX + 12} y={tooltipY + 18} fill={metric.color} fontSize="11" fontFamily="Inter" fontWeight="600">
                   {formatDateLabel(hovered.date)}
                 </text>
-                <text x={tooltipX + 12} y={tooltipY + 34} fill="#dce1fb" fontSize="11" fontFamily="Inter">
+                <text x={tooltipX + 12} y={tooltipY + 34} fill="#1a1a1a" fontSize="11" fontFamily="Inter">
                   {metric.label}: <tspan fill={metric.color} fontWeight="600">{Math.round(hovered.value)}{isInverse ? '%' : ''}</tspan>
                 </text>
                 <text x={tooltipX + 12} y={tooltipY + 50} fill="rgba(185, 202, 203, 0.6)" fontSize="10" fontFamily="Inter">

@@ -41,12 +41,12 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={cn(
+className={cn(
                 'flex items-center gap-3 px-4 py-2.5 rounded-lg text-label-md font-medium transition-all duration-200',
                 active
                   ? 'bg-gradient-to-r from-secondary-container to-primary-container text-on-secondary-container rounded-lg mx-0'
-                  : 'text-on-surface-variant hover:text-primary hover:bg-white/5 hover:scale-[1.01] mx-0'
-              )}
+                  : 'text-on-surface-variant hover:bg-surface/10 hover:text-on-surface hover:scale-[1.01] mx-0'
+                )}
             >
               <span
                 className={cn(
@@ -77,14 +77,14 @@ export default function Sidebar() {
       <div className="px-4 pb-6 space-y-1 border-t border-outline-variant/10 pt-3">
         <Link
           href="/support"
-          className="flex items-center gap-3 px-4 py-2 rounded-lg text-label-md text-on-surface-variant hover:text-primary hover:bg-white/5 transition-all duration-200"
+          className="flex items-center gap-3 px-4 py-2 rounded-lg text-label-md text-on-surface-variant hover:bg-surface/10 hover:text-on-surface transition-all duration-200"
         >
           <span className="material-symbols-outlined text-[18px]">help</span>
           Support
         </Link>
         <Link
           href="/profile"
-          className="flex items-center gap-3 px-4 py-2 rounded-lg text-label-md text-on-surface-variant hover:text-primary hover:bg-white/5 transition-all duration-200"
+          className="flex items-center gap-3 px-4 py-2 rounded-lg text-label-md text-on-surface-variant hover:bg-surface/10 hover:text-on-surface transition-all duration-200"
         >
           <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
           Account

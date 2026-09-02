@@ -114,7 +114,7 @@ export default function LifestyleEngineCard({ recommendations }: Props) {
               <path
                 d="M 10 55 A 50 50 0 0 1 110 55"
                 fill="none"
-                stroke="#23293c"
+                stroke="#e0e0e0"
                 strokeWidth="6"
                 strokeLinecap="round"
               />
@@ -129,7 +129,7 @@ export default function LifestyleEngineCard({ recommendations }: Props) {
                 strokeDashoffset={Math.max(0, 157 - (lifestyle.sleepIncrease / 120) * 157)}
               />
               {/* Label */}
-              <text x="60" y="48" textAnchor="middle" fill="#dce1fb" fontSize="10" fontWeight="600">
+              <text x="60" y="48" textAnchor="middle" fill="#1a1a1a" fontSize="10" fontWeight="600">
                 {7 + lifestyle.sleepIncrease / 60}h target
               </text>
             </svg>

@@ -285,7 +285,7 @@ export default function CumulativeRiskChart({ overallHealthIndex, createdAt }: C
               <g>
                 <rect x={tooltipX} y={tooltipY} width={148} height={52} rx="8" fill="rgba(21, 27, 45, 0.95)" stroke="rgba(0, 219, 231, 0.3)" strokeWidth="1" />
                 <text x={tooltipX + 12} y={tooltipY + 18} fill="#00dbe7" fontSize="11" fontFamily="Inter" fontWeight="600">{hovered.month}</text>
-                <text x={tooltipX + 12} y={tooltipY + 34} fill="#dce1fb" fontSize="11" fontFamily="Inter">
+                <text x={tooltipX + 12} y={tooltipY + 34} fill="#1a1a1a" fontSize="11" fontFamily="Inter">
                   Risk: {Math.round(hovered.risk)}% · Health: {hovered.health}
                 </text>
               </g>

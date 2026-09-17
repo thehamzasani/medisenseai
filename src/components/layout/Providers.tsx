@@ -13,7 +13,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         theme="dark"
         toastOptions={{
           style: {
-            background: 'rgba(21, 27, 45, 0.95)',
+            background: '#ffffff',
             backdropFilter: 'blur(20px)',
             border: '1px solid rgba(0, 219, 231, 0.2)',
             color: '#1a1a1a',

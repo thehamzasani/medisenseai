@@ -19,7 +19,7 @@ const DISEASE_CARDS = [
   { key: 'hypertension',  label: 'Hypertension',   icon: 'monitor_heart'    },
   { key: 'stroke',        label: 'Stroke',         icon: 'neurology'        },
   { key: 'heartDisease',  label: 'Heart Disease',  icon: 'cardiology'       },
-  { key: 'kidneyDisease', label: 'Kidney Disease', icon: 'kidney'           },
+  { key: 'kidneyDisease', label: 'Kidney Disease', icon: 'water_drop'       },
   { key: 'liverDisease',  label: 'Liver Disease',  icon: 'medical_services' },
 ] as const
 

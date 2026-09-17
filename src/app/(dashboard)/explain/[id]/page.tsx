@@ -16,7 +16,7 @@ const DISEASE_CONFIG: Record<DiseaseKey, { label: string; icon: string }> = {
   heartDisease: { label: 'Heart Disease', icon: 'cardiology' },
   hypertension: { label: 'Hypertension', icon: 'monitor_heart' },
   stroke: { label: 'Stroke', icon: 'neurology' },
-  kidneyDisease: { label: 'Kidney Disease', icon: 'kidney' },
+  kidneyDisease: { label: 'Kidney Disease', icon: 'water_drop' },
   liverDisease: { label: 'Liver Disease', icon: 'medical_services' },
 }
 

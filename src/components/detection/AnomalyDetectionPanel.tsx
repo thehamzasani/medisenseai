@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import type { AssessmentWithResults } from '@/types'
 
 interface Props {
@@ -17,28 +17,38 @@ export default function AnomalyDetectionPanel({ assessment }: Props) {
     (assessment.hypertensionLevel === 'HIGH' || assessment.hypertensionLevel === 'CRITICAL') ||
     (assessment.strokeLevel === 'HIGH' || assessment.strokeLevel === 'CRITICAL')
 
-  // const markerColor = isHighRisk ? 'border-error/50' : 'border-tertiary-fixed-dim'
-  // const markerGlow = isHighRisk
-  //   ? '0 0 20px rgba(255,180,171,0.4)'
-  //   : '0 0 20px rgba(60,221,199,0.4)'
+  const scanRef = useRef(0)
+  const pulseRef = useRef(1)
 
-  // // Determine anomaly position based on risk
-  // const anomalyX = isHighRisk ? 62 : 45
-  // const anomalyY = isHighRisk ? 38 : 55
+  const animationRef = useRef<number | null>(null)
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setScanAngle(prev => (prev + 1.5) % 360)
-    }, 30)
-    return () => clearInterval(interval)
-  }, [])
+  const isHighRiskCalc =
+    (assessment.diabetesLevel === 'HIGH' || assessment.diabetesLevel === 'CRITICAL') ||
+    (assessment.heartDiseaseLevel === 'HIGH' || assessment.heartDiseaseLevel === 'CRITICAL') ||
+    (assessment.hypertensionLevel === 'HIGH' || assessment.hypertensionLevel === 'CRITICAL') ||
+    (assessment.strokeLevel === 'HIGH' || assessment.strokeLevel === 'CRITICAL')
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setPulseScale(prev => prev === 1 ? 1.15 : 1)
-    }, 1200)
-    return () => clearInterval(interval)
-  }, [])
+    const startAnimation = () => {
+      const render = () => {
+        setScanAngle(prev => (prev + 1.5) % 360)
+        setPulseScale(prev => prev === 1 ? 1.15 : 1)
+        animationRef.current = requestAnimationFrame(render)
+      }
+      animationRef.current = requestAnimationFrame(render)
+      return () => {
+        if (animationRef.current) {
+          cancelAnimationFrame(animationRef.current)
+        }
+      }
+    }
+    const cancel = startAnimation()
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
+    }
+  }, [assessment])
 
   const urgency = assessment.urgency ?? 'MONITOR'
   const healthIndex = assessment.overallHealthIndex ?? 72
@@ -218,7 +228,7 @@ export default function AnomalyDetectionPanel({ assessment }: Props) {
       {/* Engine label */}
       <div className="absolute top-16 right-5 text-right">
         <p className="text-[10px] text-on-surface-variant uppercase tracking-wider">Engine</p>
-        <p className="text-label-sm text-primary-fixed-dim font-semibold">Neural Network v5.0</p>
+        <p className="text-label-sm text-primary-fixed-dim font-semibold">Neural Network</p>
         <p className="text-[10px] text-on-surface-variant">99.2% Accuracy</p>
       </div>
     </div>

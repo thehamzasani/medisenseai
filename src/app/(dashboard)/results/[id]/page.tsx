@@ -229,7 +229,6 @@ export default async function ResultsPage({ params }: Props) {
                 icon={cfg.icon}
                 risk={topRisk as { risk: number; level: import('@/types').RiskLevel; confidence: number }}
                 modelName={assessment.bestEngine ?? 'Neural Network'}
-                modelVersion="v5.0"
                 explainHref={`/explain/${params.id}#${key}`}
                 riskDelta={riskDelta}
               />
@@ -250,7 +249,6 @@ export default async function ResultsPage({ params }: Props) {
                 confidence: bestEngineResult?.diseases.heartDisease.confidence ?? 90,
               } as { risk: number; level: import('@/types').RiskLevel; confidence: number }}
               modelName={assessment.bestEngine ?? 'Neural Network'}
-              modelVersion="v5.0"
               wide
               explainHref={`/explain/${params.id}#heartDisease`}
               riskDelta={assessment.riskDelta?.heartDisease ? { delta: assessment.riskDelta.heartDisease.delta, trend: assessment.riskDelta.heartDisease.trend as TrendDirection } : undefined}
@@ -279,7 +277,6 @@ export default async function ResultsPage({ params }: Props) {
                 icon={cfg.icon}
                 risk={{ risk: riskPct, level: riskLvl, confidence: conf } as { risk: number; level: import('@/types').RiskLevel; confidence: number }}
                 modelName={assessment.bestEngine ?? 'Neural Network'}
-                modelVersion="v5.0"
                 explainHref={`/explain/${params.id}#${key}`}
                 riskDelta={riskDelta}
               />

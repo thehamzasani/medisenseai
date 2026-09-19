@@ -28,9 +28,6 @@ export default function Sidebar() {
         <span className="text-headline-md font-bold text-primary-fixed-dim tracking-tight">
           MediSense AI
         </span>
-        <span className="text-[10px] uppercase tracking-widest text-on-surface-variant">
-          Clinical Intelligence v2.0
-        </span>
       </div>
 
       {/* Nav items */}

@@ -2,7 +2,7 @@ import { GoogleGenAI, Type } from '@google/genai'
 import type { AssessmentHistoryPoint, TimelinePredictionData, TimelinePredictionPoint } from '@/types'
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash'
 
 const TIMELINE_POINT_SCHEMA = {
   type: Type.OBJECT,
@@ -87,7 +87,7 @@ export async function predictTimeline(
       model: GEMINI_MODEL,
       contents: userPrompt,
       config: {
-        systemInstruction: 'You are MediSense Neural Network v5.0 — a predictive health forecasting AI. Analyze longitudinal patient data to project future health trajectories with confidence intervals. Return ONLY valid JSON matching the specified schema.',
+        systemInstruction: 'You are MediSense Neural Network — a predictive health forecasting AI. Analyze longitudinal patient data to project future health trajectories with confidence intervals. Return ONLY valid JSON matching the specified schema.',
         responseMimeType: 'application/json',
         responseSchema: TIMELINE_RESPONSE_SCHEMA,
         temperature: 0.1,

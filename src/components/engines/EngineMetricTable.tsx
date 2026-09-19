@@ -50,7 +50,6 @@ export default function EngineMetricTable({ engineResults }: EngineMetricTablePr
           <thead>
             <tr className="border-b border-outline-variant/20">
               <th className="text-left px-6 py-3 text-label-sm text-on-surface-variant uppercase tracking-wider">Engine</th>
-              <th className="text-left px-4 py-3 text-label-sm text-on-surface-variant uppercase tracking-wider">Version</th>
               <th className="text-right px-4 py-3 text-label-sm text-on-surface-variant uppercase tracking-wider">Accuracy</th>
               <th className="text-right px-4 py-3 text-label-sm text-on-surface-variant uppercase tracking-wider">Inference ms</th>
               <th className="text-right px-4 py-3 text-label-sm text-on-surface-variant uppercase tracking-wider">False Pos Rate</th>
@@ -93,11 +92,6 @@ export default function EngineMetricTable({ engineResults }: EngineMetricTablePr
                         </div>
                       </div>
                     </div>
-                  </td>
-
-                  {/* Version */}
-                  <td className="px-4 py-3">
-                    <span className="text-label-sm text-on-surface-variant">{def.version}</span>
                   </td>
 
                   {/* Accuracy */}

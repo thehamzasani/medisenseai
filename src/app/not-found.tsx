@@ -133,7 +133,7 @@ export default function NotFound() {
           <span className="material-symbols-outlined text-sm text-outline">medical_services</span>
           <div className="h-px w-16 bg-outline-variant" />
         </div>
-        <p className="text-label-sm text-outline mt-2">MediSense AI — Clinical Intelligence v3</p>
+        <p className="text-label-sm text-outline mt-2">MediSense AI — Clinical Intelligence</p>
       </div>
     </div>
   )

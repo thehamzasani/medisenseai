@@ -110,7 +110,6 @@ export default async function EnginesPage({ params }: Props) {
           const fallbackResult = {
             engine: def.name,
             accuracy: def.accuracy,
-            modelVersion: def.version,
             inferenceMs: def.inferenceMs,
             isBest: false,
             falsePositiveRate: def.falsePositiveRate,

@@ -203,7 +203,7 @@ export default async function RecommendationsPage({ params }: Props) {
           />
         </div>
         <div className="col-span-12 lg:col-span-4">
-          <MedicationSyncCard recommendations={recommendations} />
+          <MedicationSyncCard recommendations={recommendations} assessmentCreatedAt={assessment.createdAt} />
         </div>
       </div>
 

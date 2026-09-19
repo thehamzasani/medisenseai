@@ -22,21 +22,21 @@ export default function TopNav() {
       </div>
 
       {/* Right section */}
-      <div className="flex items-center gap-4 ml-6">
+      {/* <div className="flex items-center gap-4 ml-6"> */}
         {/* System status badge */}
-        <div className="hidden md:flex items-center gap-1.5 bg-primary-fixed-dim/10 border border-primary-fixed-dim/20 rounded-full px-3 py-1">
+        {/* <div className="hidden md:flex items-center gap-1.5 bg-primary-fixed-dim/10 border border-primary-fixed-dim/20 rounded-full px-3 py-1">
           <span className="h-1.5 w-1.5 rounded-full bg-tertiary-fixed-dim animate-pulse" />
           <span className="text-[11px] font-semibold text-primary-fixed-dim uppercase tracking-wider">
             System Status: Optimal
           </span>
-        </div>
+        </div> */}
 
         {/* Notification bell */}
-        <button className="relative flex h-9 w-9 items-center justify-center rounded-full bg-surface-container-low border border-outline-variant/20 text-on-surface-variant hover:text-primary hover:border-primary-fixed-dim/30 transition-all duration-200">
+        {/* <button className="relative flex h-9 w-9 items-center justify-center rounded-full bg-surface-container-low border border-outline-variant/20 text-on-surface-variant hover:text-primary hover:border-primary-fixed-dim/30 transition-all duration-200">
           <span className="material-symbols-outlined text-[20px]">notifications</span>
           <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-error border-2 border-surface" />
         </button>
-      </div>
+      </div> */}
     </header>
   )
 }

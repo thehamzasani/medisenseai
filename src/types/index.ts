@@ -24,7 +24,6 @@ export interface DiseaseRisk {
 export interface EngineResult {
   engine:            string
   accuracy:          number
-  modelVersion:      string
   inferenceMs:       number
   isBest:            boolean
   diseases: {
@@ -122,9 +121,10 @@ export interface RecommendationsData {
     riskScore:   number   // 1-10
   }
   medications: Array<{
-    name:   string
-    dose:   string
-    action: 'ADJUST' | 'MAINTAIN' | 'ADD'
+    name:       string
+    dose:       string
+    action:     'ADJUST' | 'MAINTAIN' | 'ADD'
+    confidence: number   // 0-100 AI confidence per medication
   }>
   lifestyle: {
     sodiumReduction: number   // grams/day to reduce
@@ -138,6 +138,7 @@ export interface RecommendationsData {
     type:  string
     notes: string
   }>
+  syncConfidence: number   // 0-100 overall recommendation confidence
 }
 
 // ─── Assessment input (fields submitted by the user in the wizard) ─────────────

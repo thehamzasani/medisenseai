@@ -22,16 +22,16 @@ function buildEngineResults(
   }
 
   const engines = [
-    { name: 'Neural Network',      version: 'v5.0 DeepSense', accuracy: 99.2, fpr: 0.12, stars: 5, status: 'stable',      isBest: true,  v: 0   },
-    { name: 'XGBoost',             version: 'v4.1',           accuracy: 97.8, fpr: 0.45, stars: 4, status: 'stable',      isBest: false, v: 3   },
-    { name: 'LightGBM',            version: 'v3.5',           accuracy: 97.1, fpr: 0.62, stars: 4, status: 'stable',      isBest: false, v: -4  },
-    { name: 'Random Forest',       version: 'v4.2',           accuracy: 96.4, fpr: 0.81, stars: 4, status: 'stable',      isBest: false, v: 5   },
-    { name: 'AdaBoost',            version: 'v3.1',           accuracy: 95.3, fpr: 1.10, stars: 4, status: 'stable',      isBest: false, v: -3  },
-    { name: 'SVM',                 version: 'v2.8',           accuracy: 94.2, fpr: 1.35, stars: 4, status: 'stable',      isBest: false, v: 4   },
-    { name: 'Decision Tree',       version: 'v3.0',           accuracy: 92.9, fpr: 1.82, stars: 3, status: 'stable',      isBest: false, v: -6  },
-    { name: 'KNN',                 version: 'v2.5',           accuracy: 91.8, fpr: 2.14, stars: 3, status: 'stable',      isBest: false, v: 6   },
-    { name: 'Logistic Regression', version: 'v1.9',           accuracy: 89.5, fpr: 2.91, stars: 3, status: 'stable',      isBest: false, v: -5  },
-    { name: 'Naive Bayes',         version: 'v1.4',           accuracy: 88.2, fpr: 4.10, stars: 2, status: 'deprecated',  isBest: false, v: -9  },
+    { name: 'Neural Network',      accuracy: 99.2, fpr: 0.12, stars: 5, status: 'stable',      isBest: true,  v: 0   },
+    { name: 'XGBoost',             accuracy: 97.8, fpr: 0.45, stars: 4, status: 'stable',      isBest: false, v: 3   },
+    { name: 'LightGBM',            accuracy: 97.1, fpr: 0.62, stars: 4, status: 'stable',      isBest: false, v: -4  },
+    { name: 'Random Forest',       accuracy: 96.4, fpr: 0.81, stars: 4, status: 'stable',      isBest: false, v: 5   },
+    { name: 'AdaBoost',            accuracy: 95.3, fpr: 1.10, stars: 4, status: 'stable',      isBest: false, v: -3  },
+    { name: 'SVM',                 accuracy: 94.2, fpr: 1.35, stars: 4, status: 'stable',      isBest: false, v: 4   },
+    { name: 'Decision Tree',       accuracy: 92.9, fpr: 1.82, stars: 3, status: 'stable',      isBest: false, v: -6  },
+    { name: 'KNN',                 accuracy: 91.8, fpr: 2.14, stars: 3, status: 'stable',      isBest: false, v: 6   },
+    { name: 'Logistic Regression', accuracy: 89.5, fpr: 2.91, stars: 3, status: 'stable',      isBest: false, v: -5  },
+    { name: 'Naive Bayes',         accuracy: 88.2, fpr: 4.10, stars: 2, status: 'deprecated',  isBest: false, v: -9  },
   ]
 
   const inferenceMsMap: Record<string, number> = {
@@ -51,7 +51,6 @@ function buildEngineResults(
     return {
       engine:            e.name,
       accuracy:          e.accuracy,
-      modelVersion:      e.version,
       inferenceMs:       inferenceMsMap[e.name] ?? 20,
       isBest:            e.isBest,
       falsePositiveRate: e.fpr,
@@ -88,29 +87,49 @@ function buildRecommendations(
   heartRisk: number,
 ) {
   const now = Date.now()
+
+  // Build varied medications based on risk profile
+  const medications: Array<{ name: string; dose: string; action: string; confidence: number }> = []
+
+  // Diabetes medications
+  if (diabetesRisk >= 70) {
+    medications.push({ name: 'Metformin 1000mg', dose: 'Twice daily with meals', action: 'ADJUST', confidence: 88 })
+  } else if (diabetesRisk >= 50) {
+    medications.push({ name: 'Metformin 500mg', dose: 'Once daily with meal', action: 'ADJUST', confidence: 82 })
+  } else {
+    medications.push({ name: 'Metformin 500mg', dose: 'Once daily with meal', action: 'MAINTAIN', confidence: 75 })
+  }
+
+  // Cardiovascular medications
+  if (heartRisk >= 70) {
+    medications.push({ name: 'Atorvastatin 40mg', dose: 'Once daily at night', action: 'ADJUST', confidence: 90 })
+    medications.push({ name: 'Aspirin 81mg', dose: 'Once daily with food', action: 'ADD', confidence: 78 })
+  } else if (heartRisk >= 50) {
+    medications.push({ name: 'Atorvastatin 20mg', dose: 'Once daily at night', action: 'ADJUST', confidence: 85 })
+  } else {
+    medications.push({ name: 'Atorvastatin 20mg', dose: 'Once daily at night', action: 'MAINTAIN', confidence: 72 })
+  }
+
+  // Hypertension medications
+  if (hypertensionRisk >= 70) {
+    medications.push({ name: 'Lisinopril 10mg', dose: 'Once daily in morning', action: 'ADD', confidence: 86 })
+  } else if (hypertensionRisk >= 50) {
+    medications.push({ name: 'Amlodipine 5mg', dose: 'Once daily', action: 'ADD', confidence: 74 })
+  }
+
+  // Supplements (based on overall risk)
+  if (diabetesRisk >= 50 || heartRisk >= 50) {
+    medications.push({ name: 'Omega-3 Fish Oil 1000mg', dose: 'Twice daily with meals', action: 'ADD', confidence: 68 })
+  }
+  medications.push({ name: 'Vitamin D3 2000 IU', dose: 'Once daily with food', action: 'ADD', confidence: 65 })
+
   return {
     directive: {
       title:       directiveTitle,
       description: directiveDescription,
       riskScore,
     },
-    medications: [
-      {
-        name:   'Metformin 500mg',
-        dose:   'Once daily with meal',
-        action: diabetesRisk >= 60 ? 'ADJUST' : 'MAINTAIN',
-      },
-      {
-        name:   'Atorvastatin 20mg',
-        dose:   'Once daily at night',
-        action: heartRisk >= 60 ? 'ADJUST' : 'MAINTAIN',
-      },
-      {
-        name:   'Vitamin D3 2000 IU',
-        dose:   'Once daily with food',
-        action: 'ADD',
-      },
-    ],
+    medications,
     lifestyle: {
       sodiumReduction: hypertensionRisk >= 60 ? 2 : 1,
       sleepIncrease:   30,
@@ -135,6 +154,7 @@ function buildRecommendations(
         notes: 'Home monitoring recommended',
       },
     ],
+    syncConfidence: 72,
   }
 }
 

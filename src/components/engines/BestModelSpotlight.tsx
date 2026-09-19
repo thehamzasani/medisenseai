@@ -71,10 +71,7 @@ export default function BestModelSpotlight({ engineResult }: BestModelSpotlightP
           <h2 className="text-headline-lg font-bold text-primary-fixed-dim mb-1">
             Neural Network
           </h2>
-          <div className="text-label-md text-on-surface-variant mb-1">{def.version}</div>
-          <p className="text-body-md text-on-surface-variant mb-6 max-w-lg leading-relaxed">
-            {def.description}
-          </p>
+          <div className="text-label-md text-on-surface-variant mb-1">{def.description}</div>
 
           {/* Stats grid */}
           <div className="grid grid-cols-4 gap-4 mb-6">

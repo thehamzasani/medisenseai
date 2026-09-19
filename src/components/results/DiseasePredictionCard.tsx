@@ -9,7 +9,6 @@ interface DiseasePredictionCardProps {
   icon: string
   risk: DiseaseRisk | null | undefined
   modelName?: string
-  modelVersion?: string
   wide?: boolean
   explainHref?: string
   riskDelta?: { delta: number; trend: TrendDirection } | null
@@ -29,7 +28,6 @@ export default function DiseasePredictionCard({
   icon,
   risk,
   modelName = 'Neural Network',
-  modelVersion = 'v5.0',
   wide = false,
   explainHref,
   riskDelta,
@@ -124,10 +122,6 @@ export default function DiseasePredictionCard({
         <div className="pt-3 border-t border-outline-variant/20 flex items-center justify-between">
           <div className="text-[11px] text-on-surface-variant">
             <span className="text-primary-fixed-dim font-mono">{modelName}</span>
-            <span className="mx-1">·</span>
-            <span>{modelVersion}</span>
-            <span className="mx-1">·</span>
-            <span>DeepSense Engine</span>
           </div>
           <div className="flex items-center gap-2">
             {explainHref && (

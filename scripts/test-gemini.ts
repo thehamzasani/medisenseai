@@ -9,7 +9,7 @@
 //   }
 
 //   const ai = new GoogleGenAI({ apiKey })
-//   const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+//   const model = process.env.GEMINI_MODEL || 'gemini-3.6-flash'
 
 //   console.log(`Testing Gemini API with model: ${model}...`)
 
@@ -48,7 +48,7 @@ async function main() {
   }
 
   const ai = new GoogleGenAI({ apiKey })
-  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
+  const model = process.env.GEMINI_MODEL || 'gemini-3.6-flash'
 
   console.log(`Testing Gemini API with model: ${model}...`)
 

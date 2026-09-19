@@ -175,7 +175,7 @@ export default function RiskProfileGrid({ latestAssessment }: RiskProfileGridPro
                 })()}
               </span>
               <span className="text-[10px] text-on-surface-variant truncate max-w-[120px]">
-                Neural Network v5.0
+                Neural Network
               </span>
             </div>
           </div>

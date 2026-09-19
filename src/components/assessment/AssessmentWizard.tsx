@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { FormProvider, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -131,6 +131,24 @@ export default function AssessmentWizard() {
   const [phase, setPhase] = useState<AnalysisPhase>('idle')
   const [enginesComplete, setEnginesComplete] = useState(0)
   const [visibleEngines, setVisibleEngines] = useState(0)
+
+  // Staggered engine reveal animation — simulates 10 engines completing over time
+  // even though results arrive in a single batch from the 2-call architecture
+  useEffect(() => {
+    if (enginesComplete === 0) return
+    // When enginesComplete jumps to 10, stagger the visual reveal
+    if (enginesComplete >= 10 && visibleEngines < 10) {
+      let current = visibleEngines
+      const interval = setInterval(() => {
+        current++
+        setVisibleEngines(current)
+        if (current >= 10) clearInterval(interval)
+      }, 280) // ~2.8s total reveal
+      return () => clearInterval(interval)
+    }
+    // For partial updates, just set directly
+    setVisibleEngines(enginesComplete)
+  }, [enginesComplete, visibleEngines])
 
   const methods = useForm<AssessmentFormData>({
     resolver: zodResolver(assessmentSchema),
@@ -306,10 +324,12 @@ export default function AssessmentWizard() {
             </div>
             <div>
               <h3 className="text-headline-sm font-bold text-on-surface">
-                Running 10 AI Engines in Parallel...
+                Analyzing with AI Engine...
               </h3>
               <p className="text-body-md text-on-surface-variant mt-1">
-                {enginesComplete}/10 engines complete...
+                {enginesComplete >= 10
+                  ? 'All engines complete — generating recommendations...'
+                  : `${visibleEngines}/10 engines analyzing...`}
               </p>
             </div>
             <div className="space-y-2 max-h-60 overflow-y-auto">

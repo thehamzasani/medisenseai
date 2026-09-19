@@ -40,7 +40,6 @@ export default function EngineCard({ result, icon, wide }: EngineCardProps) {
           </div>
           <div>
             <div className="text-label-md font-semibold text-on-surface leading-tight">{result.engine}</div>
-            <div className="text-[11px] text-on-surface-variant mt-0.5">{result.modelVersion}</div>
           </div>
         </div>
         <div className="text-right flex-shrink-0">

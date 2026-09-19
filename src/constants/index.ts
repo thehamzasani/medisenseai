@@ -1,7 +1,6 @@
 export const ENGINE_DEFINITIONS = [
   {
     name: 'Neural Network',
-    version: 'v5.0 DeepSense',
     accuracy: 99.2,
     icon: 'memory',
     falsePositiveRate: 0.12,
@@ -12,7 +11,6 @@ export const ENGINE_DEFINITIONS = [
   },
   {
     name: 'XGBoost',
-    version: 'v4.1',
     accuracy: 97.8,
     icon: 'bolt',
     falsePositiveRate: 0.45,
@@ -23,7 +21,6 @@ export const ENGINE_DEFINITIONS = [
   },
   {
     name: 'LightGBM',
-    version: 'v3.5',
     accuracy: 97.1,
     icon: 'speed',
     falsePositiveRate: 0.62,
@@ -34,7 +31,6 @@ export const ENGINE_DEFINITIONS = [
   },
   {
     name: 'Random Forest',
-    version: 'v4.2',
     accuracy: 96.4,
     icon: 'account_tree',
     falsePositiveRate: 0.81,
@@ -45,7 +41,6 @@ export const ENGINE_DEFINITIONS = [
   },
   {
     name: 'AdaBoost',
-    version: 'v3.1',
     accuracy: 95.3,
     icon: 'auto_awesome',
     falsePositiveRate: 1.10,
@@ -56,7 +51,6 @@ export const ENGINE_DEFINITIONS = [
   },
   {
     name: 'SVM',
-    version: 'v2.8',
     accuracy: 94.2,
     icon: 'grid_view',
     falsePositiveRate: 1.35,
@@ -67,7 +61,6 @@ export const ENGINE_DEFINITIONS = [
   },
   {
     name: 'Decision Tree',
-    version: 'v3.0',
     accuracy: 92.9,
     icon: 'schema',
     falsePositiveRate: 1.82,
@@ -78,7 +71,6 @@ export const ENGINE_DEFINITIONS = [
   },
   {
     name: 'KNN',
-    version: 'v2.5',
     accuracy: 91.8,
     icon: 'groups',
     falsePositiveRate: 2.14,
@@ -89,7 +81,6 @@ export const ENGINE_DEFINITIONS = [
   },
   {
     name: 'Logistic Regression',
-    version: 'v1.9',
     accuracy: 89.5,
     icon: 'show_chart',
     falsePositiveRate: 2.91,
@@ -100,7 +91,6 @@ export const ENGINE_DEFINITIONS = [
   },
   {
     name: 'Naive Bayes',
-    version: 'v1.4',
     accuracy: 88.2,
     icon: 'functions',
     falsePositiveRate: 4.10,

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { Prisma } from '@prisma/client'
 import { getCurrentUserForApi, ANON_COOKIE, ANON_COOKIE_OPTIONS } from '@/lib/anonymous'
 import { db } from '@/lib/db'
-import { runAllEngines, aggregateResults, computeExplainability } from '@/lib/claude'
+import { runAnalysis, aggregateResults, generateRecommendations, computeExplainability, buildPatientDataPrompt } from '@/lib/claude'
 import type { AssessmentInput, ApiResponse, TrendDirection, RiskDelta } from '@/types'
 
 // type JsonInputValue =
@@ -137,13 +137,18 @@ export async function POST(request: Request) {
       },
     })
 
-    const engineResults = await runAllEngines(assessmentInput, prevAssessment)
+    const engineResults = await runAnalysis(assessmentInput, prevAssessment)
 
     engineResults.forEach(r => {
       console.log(`[analyze] Engine "${r.engine}" completed in ${r.inferenceMs}ms`)
     })
 
     const aggregate = aggregateResults(engineResults)
+
+    // Generate dynamic recommendations via dedicated Gemini call
+    const patientData = buildPatientDataPrompt(assessmentInput)
+    aggregate.recommendations = await generateRecommendations(patientData, aggregate)
+
     const explainability = computeExplainability(engineResults)
 
     // ── Compute risk deltas from previous assessment ──────────────────────

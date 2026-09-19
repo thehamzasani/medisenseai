@@ -47,12 +47,12 @@
   .surface-glass:hover {
     border-color: rgba(0, 242, 255, 0.3);
     transform: scale(1.01);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .btn-cyan {
     background: linear-gradient(135deg, #00dbe7 0%, #006a71 100%);
-    color: #002022; font-weight: 700; border-radius: 9999px; transition: all 0.2s;
+    color: #002022; font-weight: 700; border-radius: 9999px; transition: color 0.2s, background 0.2s;
   }
   .btn-cyan:hover { box-shadow: 0 0 30px rgba(0, 219, 231, 0.4); transform: scale(1.05); }
 

@@ -1,9 +1,11 @@
 'use client'
 import type { RecommendationsData } from '@/types'
+import { useMemo } from 'react'
 // import { toast } from 'sonner'
 
 interface Props {
   recommendations: RecommendationsData
+  assessmentCreatedAt?: string | Date
 }
 
 const actionConfig = {
@@ -27,14 +29,24 @@ const actionConfig = {
   },
 }
 
-export default function MedicationSyncCard({ recommendations }: Props) {
-  const { medications } = recommendations
+export default function MedicationSyncCard({ recommendations, assessmentCreatedAt }: Props) {
+  const { medications, syncConfidence } = recommendations
 
-  // const handleUpdatePrescription = () => {
-  //   if (typeof window !== 'undefined') {
-  //     // Client-only toast — this component renders on server, button click is client
-  //   }
-  // }
+  const syncPercent = Math.max(0, Math.min(100, syncConfidence ?? 70))
+
+  const lastSynced = useMemo(() => {
+    if (!assessmentCreatedAt) return 'Just now'
+    const created = new Date(assessmentCreatedAt)
+    const now = new Date()
+    const diffMs = now.getTime() - created.getTime()
+    const diffMin = Math.floor(diffMs / 60000)
+    if (diffMin < 1) return 'Just now'
+    if (diffMin < 60) return `${diffMin}m ago`
+    const diffHrs = Math.floor(diffMin / 60)
+    if (diffHrs < 24) return `${diffHrs}h ago`
+    const diffDays = Math.floor(diffHrs / 24)
+    return `${diffDays}d ago`
+  }, [assessmentCreatedAt])
 
   return (
     <div className="surface-glass rounded-2xl p-6 flex flex-col h-full relative overflow-hidden">
@@ -70,17 +82,18 @@ export default function MedicationSyncCard({ recommendations }: Props) {
           <div className="h-1.5 bg-surface-container-high rounded-full overflow-hidden">
             <div
               className="h-full rounded-full bg-gradient-to-r from-primary-fixed-dim to-primary-container"
-              style={{ width: '78%' }}
+              style={{ width: `${syncPercent}%` }}
             />
           </div>
         </div>
-        <span className="text-label-sm text-tertiary-fixed-dim font-semibold">78%</span>
+        <span className="text-label-sm text-tertiary-fixed-dim font-semibold">{syncPercent}%</span>
       </div>
 
       {/* Medications list */}
       <div className="flex-1 space-y-4 mb-6">
         {medications.map((med, i) => {
           const config = actionConfig[med.action]
+          const medConfidence = Math.max(0, Math.min(100, med.confidence ?? 70))
           return (
             <div
               key={i}
@@ -112,7 +125,7 @@ export default function MedicationSyncCard({ recommendations }: Props) {
                   <div
                     className="h-full rounded-full transition-all duration-700"
                     style={{
-                      width: med.action === 'MAINTAIN' ? '85%' : med.action === 'ADJUST' ? '55%' : '20%',
+                      width: `${medConfidence}%`,
                       background: med.action === 'MAINTAIN'
                         ? 'linear-gradient(90deg, #3cddc7, #59f2dc)'
                         : med.action === 'ADJUST'
@@ -122,7 +135,7 @@ export default function MedicationSyncCard({ recommendations }: Props) {
                   />
                 </div>
                 <span className="text-[10px] text-on-surface-variant tabular-nums">
-                  {med.action === 'MAINTAIN' ? '85%' : med.action === 'ADJUST' ? '55%' : '20%'}
+                  {medConfidence}%
                 </span>
               </div>
             </div>
@@ -136,7 +149,7 @@ export default function MedicationSyncCard({ recommendations }: Props) {
           schedule
         </span>
         <span className="text-label-sm text-on-surface-variant">
-          Last synced: <span className="text-on-surface">Just now</span>
+          Last synced: <span className="text-on-surface">{lastSynced}</span>
         </span>
         <div className="ml-auto w-2 h-2 bg-tertiary-fixed-dim rounded-full" />
       </div>

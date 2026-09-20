@@ -17,16 +17,16 @@ export default function AnomalyDetectionPanel({ assessment }: Props) {
     (assessment.hypertensionLevel === 'HIGH' || assessment.hypertensionLevel === 'CRITICAL') ||
     (assessment.strokeLevel === 'HIGH' || assessment.strokeLevel === 'CRITICAL')
 
-  const scanRef = useRef(0)
-  const pulseRef = useRef(1)
+  // const scanRef = useRef(0)
+  // const pulseRef = useRef(1)
 
   const animationRef = useRef<number | null>(null)
 
-  const isHighRiskCalc =
-    (assessment.diabetesLevel === 'HIGH' || assessment.diabetesLevel === 'CRITICAL') ||
-    (assessment.heartDiseaseLevel === 'HIGH' || assessment.heartDiseaseLevel === 'CRITICAL') ||
-    (assessment.hypertensionLevel === 'HIGH' || assessment.hypertensionLevel === 'CRITICAL') ||
-    (assessment.strokeLevel === 'HIGH' || assessment.strokeLevel === 'CRITICAL')
+  // const isHighRiskCalc =
+  //   (assessment.diabetesLevel === 'HIGH' || assessment.diabetesLevel === 'CRITICAL') ||
+  //   (assessment.heartDiseaseLevel === 'HIGH' || assessment.heartDiseaseLevel === 'CRITICAL') ||
+  //   (assessment.hypertensionLevel === 'HIGH' || assessment.hypertensionLevel === 'CRITICAL') ||
+  //   (assessment.strokeLevel === 'HIGH' || assessment.strokeLevel === 'CRITICAL')
 
   useEffect(() => {
     const startAnimation = () => {
@@ -42,7 +42,7 @@ export default function AnomalyDetectionPanel({ assessment }: Props) {
         }
       }
     }
-    const cancel = startAnimation()
+    // const cancel = startAnimation()
     return () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)

@@ -29,19 +29,19 @@ export default function AnomalyDetectionPanel({ assessment }: Props) {
   //   (assessment.strokeLevel === 'HIGH' || assessment.strokeLevel === 'CRITICAL')
 
   useEffect(() => {
-    const startAnimation = () => {
-      const render = () => {
-        setScanAngle(prev => (prev + 1.5) % 360)
-        setPulseScale(prev => prev === 1 ? 1.15 : 1)
-        animationRef.current = requestAnimationFrame(render)
-      }
-      animationRef.current = requestAnimationFrame(render)
-      return () => {
-        if (animationRef.current) {
-          cancelAnimationFrame(animationRef.current)
-        }
-      }
-    }
+    // const startAnimation = () => {
+    //   const render = () => {
+    //     setScanAngle(prev => (prev + 1.5) % 360)
+    //     setPulseScale(prev => prev === 1 ? 1.15 : 1)
+    //     animationRef.current = requestAnimationFrame(render)
+    //   }
+    //   animationRef.current = requestAnimationFrame(render)
+    //   return () => {
+    //     if (animationRef.current) {
+    //       cancelAnimationFrame(animationRef.current)
+    //     }
+    //   }
+    // }
     // const cancel = startAnimation()
     return () => {
       if (animationRef.current) {

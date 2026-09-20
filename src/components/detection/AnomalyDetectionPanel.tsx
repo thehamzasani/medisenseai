@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { AssessmentWithResults } from '@/types'
 
 interface Props {
@@ -11,44 +11,44 @@ export default function AnomalyDetectionPanel({ assessment }: Props) {
   const [scanAngle, setScanAngle] = useState(0)
   const [pulseScale, setPulseScale] = useState(1)
 
-  const isHighRisk =
-    (assessment.diabetesLevel === 'HIGH' || assessment.diabetesLevel === 'CRITICAL') ||
-    (assessment.heartDiseaseLevel === 'HIGH' || assessment.heartDiseaseLevel === 'CRITICAL') ||
-    (assessment.hypertensionLevel === 'HIGH' || assessment.hypertensionLevel === 'CRITICAL') ||
-    (assessment.strokeLevel === 'HIGH' || assessment.strokeLevel === 'CRITICAL')
-
-  // const scanRef = useRef(0)
-  // const pulseRef = useRef(1)
-
   const animationRef = useRef<number | null>(null)
 
-  // const isHighRiskCalc =
-  //   (assessment.diabetesLevel === 'HIGH' || assessment.diabetesLevel === 'CRITICAL') ||
-  //   (assessment.heartDiseaseLevel === 'HIGH' || assessment.heartDiseaseLevel === 'CRITICAL') ||
-  //   (assessment.hypertensionLevel === 'HIGH' || assessment.hypertensionLevel === 'CRITICAL') ||
-  //   (assessment.strokeLevel === 'HIGH' || assessment.strokeLevel === 'CRITICAL')
+  const isHighRisk =
+    assessment.diabetesLevel === 'HIGH' ||
+    assessment.diabetesLevel === 'CRITICAL' ||
+    assessment.heartDiseaseLevel === 'HIGH' ||
+    assessment.heartDiseaseLevel === 'CRITICAL' ||
+    assessment.hypertensionLevel === 'HIGH' ||
+    assessment.hypertensionLevel === 'CRITICAL' ||
+    assessment.strokeLevel === 'HIGH' ||
+    assessment.strokeLevel === 'CRITICAL'
 
   useEffect(() => {
-    // const startAnimation = () => {
-    //   const render = () => {
-    //     setScanAngle(prev => (prev + 1.5) % 360)
-    //     setPulseScale(prev => prev === 1 ? 1.15 : 1)
-    //     animationRef.current = requestAnimationFrame(render)
-    //   }
-    //   animationRef.current = requestAnimationFrame(render)
-    //   return () => {
-    //     if (animationRef.current) {
-    //       cancelAnimationFrame(animationRef.current)
-    //     }
-    //   }
-    // }
-    // const cancel = startAnimation()
+    let frameId: number
+
+    const animate = () => {
+      setScanAngle((previous) => (previous + 1.5) % 360)
+
+      setPulseScale((previous) =>
+        previous >= 1.15 ? 1 : previous + 0.01
+      )
+
+      frameId = requestAnimationFrame(animate)
+      animationRef.current = frameId
+    }
+
+    frameId = requestAnimationFrame(animate)
+    animationRef.current = frameId
+
     return () => {
-      if (animationRef.current) {
+      cancelAnimationFrame(frameId)
+
+      if (animationRef.current !== null) {
         cancelAnimationFrame(animationRef.current)
+        animationRef.current = null
       }
     }
-  }, [assessment])
+  }, [])
 
   const urgency = assessment.urgency ?? 'MONITOR'
   const healthIndex = assessment.overallHealthIndex ?? 72
@@ -58,21 +58,33 @@ export default function AnomalyDetectionPanel({ assessment }: Props) {
       label: 'Metabolic Anomaly',
       x: 35,
       y: 42,
-      severity: (assessment.diabetesLevel === 'HIGH' || assessment.diabetesLevel === 'CRITICAL') ? 'HIGH' : 'LOW',
+      severity:
+        assessment.diabetesLevel === 'HIGH' ||
+        assessment.diabetesLevel === 'CRITICAL'
+          ? 'HIGH'
+          : 'LOW',
       metric: `Glucose: ${assessment.fastingGlucose} mg/dL`,
     },
     {
       label: 'Cardiovascular Signal',
       x: 62,
       y: 30,
-      severity: (assessment.heartDiseaseLevel === 'HIGH' || assessment.heartDiseaseLevel === 'CRITICAL') ? 'HIGH' : 'LOW',
+      severity:
+        assessment.heartDiseaseLevel === 'HIGH' ||
+        assessment.heartDiseaseLevel === 'CRITICAL'
+          ? 'HIGH'
+          : 'LOW',
       metric: `BP: ${assessment.systolicBP}/${assessment.diastolicBP} mmHg`,
     },
     {
       label: 'Pressure Deviation',
       x: 70,
       y: 62,
-      severity: (assessment.hypertensionLevel === 'HIGH' || assessment.hypertensionLevel === 'CRITICAL') ? 'HIGH' : 'LOW',
+      severity:
+        assessment.hypertensionLevel === 'HIGH' ||
+        assessment.hypertensionLevel === 'CRITICAL'
+          ? 'HIGH'
+          : 'LOW',
       metric: `HR: ${assessment.heartRate} BPM`,
     },
   ]
@@ -83,26 +95,31 @@ export default function AnomalyDetectionPanel({ assessment }: Props) {
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-5 bg-gradient-to-b from-surface-container-lowest/80 to-transparent">
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-primary-fixed-dim animate-pulse" />
+
           <span className="text-label-sm uppercase tracking-widest text-primary-fixed-dim">
             Anomaly Detection Core
           </span>
         </div>
+
         <div className="flex items-center gap-2">
-          <span className={`text-label-sm px-3 py-1 rounded-full border ${
-            isHighRisk
-              ? 'bg-error/10 text-error border-error/30'
-              : 'bg-tertiary-fixed-dim/10 text-tertiary-fixed-dim border-tertiary-fixed-dim/30'
-          }`}>
+          <span
+            className={`text-label-sm px-3 py-1 rounded-full border ${
+              isHighRisk
+                ? 'bg-error/10 text-error border-error/30'
+                : 'bg-tertiary-fixed-dim/10 text-tertiary-fixed-dim border-tertiary-fixed-dim/30'
+            }`}
+          >
             {isHighRisk ? 'Anomalies Detected' : 'Nominal Range'}
           </span>
         </div>
       </div>
 
-      {/* Radar circles */}
+      {/* Radar */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        {/* Radar circles */}
         {[280, 220, 160, 100, 50].map((size, i) => (
           <div
-            key={i}
+            key={size}
             className="absolute rounded-full border"
             style={{
               width: size,
@@ -126,7 +143,8 @@ export default function AnomalyDetectionPanel({ assessment }: Props) {
             style={{
               width: 140,
               height: 1,
-              background: 'linear-gradient(90deg, rgba(0,219,231,0.6) 0%, transparent 100%)',
+              background:
+                'linear-gradient(90deg, rgba(0,219,231,0.6) 0%, transparent 100%)',
               transform: 'translateY(-50%)',
             }}
           />
@@ -138,47 +156,78 @@ export default function AnomalyDetectionPanel({ assessment }: Props) {
           style={{
             width: 280,
             height: 280,
-            background: `conic-gradient(from ${scanAngle}deg, rgba(0,219,231,0.08) 0deg, transparent 60deg)`,
+            background: `conic-gradient(
+              from ${scanAngle}deg,
+              rgba(0,219,231,0.08) 0deg,
+              transparent 60deg
+            )`,
           }}
         />
       </div>
 
       {/* Anomaly markers */}
-      {anomalies.map((anomaly, i) => (
+      {anomalies.map((anomaly) => (
         <div
-          key={i}
+          key={anomaly.label}
           className="absolute z-20 group"
-          style={{ left: `${anomaly.x}%`, top: `${anomaly.y}%` }}
+          style={{
+            left: `${anomaly.x}%`,
+            top: `${anomaly.y}%`,
+          }}
         >
           {/* Spinning ring */}
           <div
             className={`absolute -inset-3 rounded-full border-2 border-dashed animate-spin-slow ${
-              anomaly.severity === 'HIGH' ? 'border-error/50' : 'border-tertiary-fixed-dim/50'
+              anomaly.severity === 'HIGH'
+                ? 'border-error/50'
+                : 'border-tertiary-fixed-dim/50'
             }`}
           />
+
           {/* Core dot */}
           <div
             className={`w-3 h-3 rounded-full ${
-              anomaly.severity === 'HIGH' ? 'bg-error' : 'bg-tertiary-fixed-dim'
+              anomaly.severity === 'HIGH'
+                ? 'bg-error'
+                : 'bg-tertiary-fixed-dim'
             }`}
             style={{
-              boxShadow: anomaly.severity === 'HIGH'
-                ? '0 0 12px rgba(255,180,171,0.8)'
-                : '0 0 12px rgba(60,221,199,0.8)',
+              boxShadow:
+                anomaly.severity === 'HIGH'
+                  ? '0 0 12px rgba(255,180,171,0.8)'
+                  : '0 0 12px rgba(60,221,199,0.8)',
               transform: `scale(${pulseScale})`,
-              transition: 'transform 0.6s ease-in-out',
+              transition: 'transform 0.1s linear',
             }}
           />
+
           {/* Tooltip */}
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-44 surface-glass rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-30">
-            <p className={`text-label-sm font-semibold ${
-              anomaly.severity === 'HIGH' ? 'text-error' : 'text-tertiary-fixed-dim'
-            }`}>
+            <p
+              className={`text-label-sm font-semibold ${
+                anomaly.severity === 'HIGH'
+                  ? 'text-error'
+                  : 'text-tertiary-fixed-dim'
+              }`}
+            >
               {anomaly.label}
             </p>
-            <p className="text-[10px] text-on-surface-variant mt-0.5">{anomaly.metric}</p>
+
+            <p className="text-[10px] text-on-surface-variant mt-0.5">
+              {anomaly.metric}
+            </p>
+
             <p className="text-[10px] text-on-surface-variant">
-              Severity: <span className={anomaly.severity === 'HIGH' ? 'text-error' : 'text-tertiary-fixed-dim'}>{anomaly.severity}</span>
+              Severity:{' '}
+              <span
+                className={
+                  anomaly.severity === 'HIGH'
+                    ? 'text-error'
+                    : 'text-tertiary-fixed-dim'
+                }
+              >
+                {anomaly.severity}
+              </span>
             </p>
           </div>
         </div>
@@ -187,30 +236,56 @@ export default function AnomalyDetectionPanel({ assessment }: Props) {
       {/* Bottom info bar */}
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface-container-lowest/90 to-transparent p-5">
         <div className="grid grid-cols-4 gap-3">
+          {/* Scan Zone */}
           <div className="surface-glass rounded-lg p-3">
-            <p className="text-[10px] uppercase tracking-wider text-on-surface-variant mb-1">Scan Zone</p>
-            <p className="text-label-md font-semibold text-primary-fixed-dim">Active</p>
+            <p className="text-[10px] uppercase tracking-wider text-on-surface-variant mb-1">
+              Scan Zone
+            </p>
+
+            <p className="text-label-md font-semibold text-primary-fixed-dim">
+              Active
+            </p>
           </div>
+
+          {/* Health Index */}
           <div className="surface-glass rounded-lg p-3">
-            <p className="text-[10px] uppercase tracking-wider text-on-surface-variant mb-1">Health Index</p>
-            <p className="text-label-md font-semibold text-on-surface">{healthIndex}/100</p>
+            <p className="text-[10px] uppercase tracking-wider text-on-surface-variant mb-1">
+              Health Index
+            </p>
+
+            <p className="text-label-md font-semibold text-on-surface">
+              {healthIndex}/100
+            </p>
           </div>
+
+          {/* Urgency */}
           <div className="surface-glass rounded-lg p-3">
-            <p className="text-[10px] uppercase tracking-wider text-on-surface-variant mb-1">Urgency</p>
-            <p className={`text-label-md font-semibold ${
-              urgency === 'URGENT' || urgency === 'SOON'
-                ? 'text-error'
-                : urgency === 'WATCH'
-                ? 'text-secondary'
-                : 'text-tertiary-fixed-dim'
-            }`}>
+            <p className="text-[10px] uppercase tracking-wider text-on-surface-variant mb-1">
+              Urgency
+            </p>
+
+            <p
+              className={`text-label-md font-semibold ${
+                urgency === 'URGENT' || urgency === 'SOON'
+                  ? 'text-error'
+                  : urgency === 'WATCH'
+                    ? 'text-secondary'
+                    : 'text-tertiary-fixed-dim'
+              }`}
+            >
               {urgency}
             </p>
           </div>
+
+          {/* Anomalies */}
           <div className="surface-glass rounded-lg p-3">
-            <p className="text-[10px] uppercase tracking-wider text-on-surface-variant mb-1">Anomalies</p>
+            <p className="text-[10px] uppercase tracking-wider text-on-surface-variant mb-1">
+              Anomalies
+            </p>
+
             <p className="text-label-md font-semibold text-on-surface">
-              {anomalies.filter(a => a.severity === 'HIGH').length} / {anomalies.length}
+              {anomalies.filter((a) => a.severity === 'HIGH').length} /{' '}
+              {anomalies.length}
             </p>
           </div>
         </div>
@@ -220,16 +295,26 @@ export default function AnomalyDetectionPanel({ assessment }: Props) {
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="relative">
           <div className="w-px h-8 bg-primary-fixed-dim/30 absolute left-1/2 -top-4 -translate-x-1/2" />
+
           <div className="w-8 h-px bg-primary-fixed-dim/30 absolute top-1/2 -left-4 -translate-y-1/2" />
+
           <div className="w-2 h-2 rounded-full bg-primary-fixed-dim/50" />
         </div>
       </div>
 
       {/* Engine label */}
       <div className="absolute top-16 right-5 text-right">
-        <p className="text-[10px] text-on-surface-variant uppercase tracking-wider">Engine</p>
-        <p className="text-label-sm text-primary-fixed-dim font-semibold">Neural Network</p>
-        <p className="text-[10px] text-on-surface-variant">99.2% Accuracy</p>
+        <p className="text-[10px] text-on-surface-variant uppercase tracking-wider">
+          Engine
+        </p>
+
+        <p className="text-label-sm text-primary-fixed-dim font-semibold">
+          Neural Network
+        </p>
+
+        <p className="text-[10px] text-on-surface-variant">
+          99.2% Accuracy
+        </p>
       </div>
     </div>
   )

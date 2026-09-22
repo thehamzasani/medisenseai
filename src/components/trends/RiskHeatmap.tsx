@@ -1,22 +1,46 @@
 'use client'
 
 import { useState } from 'react'
+import type { AssessmentWithResults } from '@/types'
 
 interface RiskHeatmapProps {
   overallHealthIndex: number | null
   createdAt: string
+  assessment: AssessmentWithResults
 }
 
-function generateCells(health: number, createdAt: string): Array<{ day: string; value: number; date: string }> {
+function normalizeMetric(value: number, min: number, max: number): number {
+  if (value < min) return Math.max(0, 50 - ((min - value) / min) * 30)
+  if (value > max) return Math.max(0, 50 - ((value - max) / max) * 30)
+  const mid = (min + max) / 2
+  const range = (max - min) / 2
+  return 50 + (50 * (value - mid)) / range
+}
+
+function generateCells(health: number, createdAt: string, assessment: AssessmentWithResults): Array<{ day: string; value: number; date: string }> {
   const base = new Date(createdAt)
   const cells = []
+
+  const glucoseNorm = normalizeMetric(assessment.fastingGlucose, 70, 100)
+  const bpNorm = normalizeMetric(assessment.systolicBP, 90, 120)
+  const hrNorm = normalizeMetric(assessment.heartRate, 60, 100)
+  const hba1cNorm = normalizeMetric(assessment.hba1c, 4.0, 5.7)
+
+  // Weighted biomarker base: glucose 30%, BP 30%, HR 20%, HbA1c 20%
+  const biomarkerBase = glucoseNorm * 0.3 + bpNorm * 0.3 + hrNorm * 0.2 + hba1cNorm * 0.2
+
+  // Use overall health index to blend with biomarker score
+  const baseScore = (health + biomarkerBase) / 2
 
   for (let i = 27; i >= 0; i--) {
     const d = new Date(base)
     d.setDate(d.getDate() - i)
-    // Simulate day-level health variation
-    const noise = (Math.sin(i * 1.3) * 8 + Math.cos(i * 2.1) * 5)
-    const val = Math.max(20, Math.min(100, health + noise))
+
+    // Deterministic daily variation based on day index + biomarker seeds
+    const seed = (i * 1.7 + glucoseNorm * 0.3 + bpNorm * 0.5) % 1
+    const dailyShift = Math.sin(i * 1.3 + seed * 2) * 8 + Math.cos(i * 2.1 + seed) * 5
+    const val = Math.max(20, Math.min(100, baseScore + dailyShift))
+
     const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
     cells.push({
       day: dayNames[d.getDay()],
@@ -36,11 +60,11 @@ function getHeatColor(value: number): { bg: string; border: string } {
   return { bg: 'rgba(255, 180, 171, 0.6)', border: 'rgba(255, 180, 171, 0.8)' }
 }
 
-export default function RiskHeatmap({ overallHealthIndex, createdAt }: RiskHeatmapProps) {
+export default function RiskHeatmap({ overallHealthIndex, createdAt, assessment }: RiskHeatmapProps) {
   const [tooltip, setTooltip] = useState<{ idx: number; x: number; y: number } | null>(null)
 
   const health = overallHealthIndex ?? 72
-  const cells = generateCells(health, createdAt)
+  const cells = generateCells(health, createdAt, assessment)
 
   const dayLabels = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 

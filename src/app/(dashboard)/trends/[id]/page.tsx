@@ -128,6 +128,7 @@ export default async function TrendsPage({ params }: Props) {
                 <CumulativeRiskChart
                   overallHealthIndex={assessment.overallHealthIndex}
                   createdAt={assessment.createdAt}
+                  history={history}
                 />
               )}
             </div>
@@ -229,12 +230,14 @@ export default async function TrendsPage({ params }: Props) {
               <VarianceTable
                 keyFactors={assessment.keyFactors}
                 createdAt={assessment.createdAt}
+                assessment={assessment}
               />
             </div>
             <div className="col-span-4">
               <RiskHeatmap
                 overallHealthIndex={assessment.overallHealthIndex}
                 createdAt={assessment.createdAt}
+                assessment={assessment}
               />
             </div>
           </div>

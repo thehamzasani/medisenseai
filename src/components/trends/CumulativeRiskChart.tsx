@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 
+import type { AssessmentHistoryPoint } from '@/types'
+
 interface DataPoint {
   month: string
   risk: number
@@ -11,36 +13,57 @@ interface DataPoint {
 interface CumulativeRiskChartProps {
   overallHealthIndex: number | null
   createdAt: string
+  history: AssessmentHistoryPoint[]
 }
 
-// Generate plausible historical data points based on current health score
-function generateHistoricalData(currentHealth: number, createdAt: string, filter: '1Y' | '6M' | '3M'): DataPoint[] {
+function generateHistoricalData(currentHealth: number, createdAt: string, filter: '1Y' | '6M' | '3M', history: AssessmentHistoryPoint[]): DataPoint[] {
   const months = filter === '1Y' ? 12 : filter === '6M' ? 6 : 3
   const now = new Date(createdAt)
-  const data: DataPoint[] = []
-
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-  // Simulate a health trajectory leading to current value
-  const startHealth = Math.max(40, Math.min(95, currentHealth - 15 + Math.random() * 10))
-  
+  // Map real history points to monthly data
+  const historyMap = new Map<string, number>()
+  for (const point of history) {
+    const d = new Date(point.date)
+    const key = `${d.getFullYear()}-${d.getMonth()}`
+    const health = point.overallHealthIndex ?? currentHealth
+    historyMap.set(key, health)
+  }
+
+  const data: DataPoint[] = []
+
+  // Build data from history or interpolate
+  let lastKnown: number | null = null
   for (let i = months - 1; i >= 0; i--) {
     const d = new Date(now)
     d.setMonth(d.getMonth() - i)
-    const progress = (months - 1 - i) / (months - 1)
-    const health = Math.round(startHealth + (currentHealth - startHealth) * progress + (Math.random() - 0.5) * 8)
-    const clampedHealth = Math.max(30, Math.min(100, health))
+    const key = `${d.getFullYear()}-${d.getMonth()}`
+
+    let health: number
+    if (historyMap.has(key)) {
+      health = historyMap.get(key)!
+      lastKnown = health
+    } else if (lastKnown !== null) {
+      // Interpolate towards current health
+      const progress = (months - 1 - i) / (months - 1)
+      health = Math.round(lastKnown + (currentHealth - lastKnown) * progress)
+    } else {
+      // No history before this point — use current health with slight offset
+      health = currentHealth
+    }
+
+    health = Math.max(30, Math.min(100, health))
     data.push({
       month: monthNames[d.getMonth()],
-      risk: 100 - clampedHealth,
-      health: clampedHealth,
+      risk: 100 - health,
+      health,
     })
   }
 
   return data
 }
 
-export default function CumulativeRiskChart({ overallHealthIndex, createdAt }: CumulativeRiskChartProps) {
+export default function CumulativeRiskChart({ overallHealthIndex, createdAt, history }: CumulativeRiskChartProps) {
   const [filter, setFilter] = useState<'1Y' | '6M' | '3M'>('1Y')
   const [data, setData] = useState<DataPoint[]>([])
   const [animProgress, setAnimProgress] = useState(0)
@@ -50,7 +73,7 @@ export default function CumulativeRiskChart({ overallHealthIndex, createdAt }: C
   const health = overallHealthIndex ?? 72
 
   useEffect(() => {
-    const d = generateHistoricalData(health, createdAt, filter)
+    const d = generateHistoricalData(health, createdAt, filter, history)
     setData(d)
     setAnimProgress(0)
 
@@ -72,7 +95,7 @@ export default function CumulativeRiskChart({ overallHealthIndex, createdAt }: C
     return () => {
       if (animRef.current) cancelAnimationFrame(animRef.current)
     }
-  }, [filter, health, createdAt])
+  }, [filter, health, createdAt, history])
 
   const viewW = 1000
   const viewH = 250

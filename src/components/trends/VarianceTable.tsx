@@ -1,7 +1,9 @@
+import type { AssessmentWithResults } from '@/types'
 
 interface VarianceTableProps {
   keyFactors: string[]
   createdAt: string
+  assessment: AssessmentWithResults
 }
 
 interface VarianceRow {
@@ -12,58 +14,87 @@ interface VarianceRow {
   status: 'ACTIVE' | 'RESOLVED' | 'MONITORING'
 }
 
-// Map key factors to structured variance rows
-function parseVarianceRows(keyFactors: string[], createdAt: string): VarianceRow[] {
+function riskLevelToImpact(level: string | null): 'HIGH' | 'MEDIUM' | 'LOW' {
+  if (level === 'CRITICAL' || level === 'HIGH') return 'HIGH'
+  if (level === 'MEDIUM') return 'MEDIUM'
+  return 'LOW'
+}
+
+function buildVarianceFromAssessment(a: AssessmentWithResults, baseDate: Date): VarianceRow[] {
+  const rows: VarianceRow[] = []
+
+  const addRow = (label: string, value: number | null, unit: string, normalMin: number, normalMax: number, level: string | null, daysAgo: number) => {
+    if (value === null) return
+    const isAbove = value > normalMax
+    const isBelow = value < normalMin
+    if (!isAbove && !isBelow) return
+
+    const diff = isAbove ? value - normalMax : normalMin - value
+    const dir = isAbove ? '↑' : '↓'
+    const d = new Date(baseDate.getTime() - daysAgo * 86400000)
+    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+
+    rows.push({
+      triggerEvent: label,
+      date: dateStr,
+      metricShift: `${dir} ${diff > 0 ? '+' : ''}${Math.round(diff)} ${unit}`,
+      riskImpact: riskLevelToImpact(level),
+      status: riskLevelToImpact(level) === 'HIGH' ? 'ACTIVE' : 'MONITORING',
+    })
+  }
+
+  addRow('Fasting glucose elevation', a.fastingGlucose, 'mg/dL', 70, 100, a.diabetesRisk && a.diabetesRisk >= 60 ? 'HIGH' : 'MEDIUM', 5)
+  addRow('HbA1c above threshold', a.hba1c, '%', 4.0, 5.7, a.diabetesRisk && a.diabetesRisk >= 60 ? 'HIGH' : 'MEDIUM', 10)
+  addRow('Systolic BP elevation', a.systolicBP, 'mmHg', 90, 120, a.hypertensionRisk && a.hypertensionRisk >= 60 ? 'HIGH' : 'MEDIUM', 8)
+  addRow('Diastolic BP elevation', a.diastolicBP, 'mmHg', 60, 80, a.hypertensionRisk && a.hypertensionRisk >= 60 ? 'HIGH' : 'MEDIUM', 12)
+  addRow('Elevated heart rate', a.heartRate, 'BPM', 60, 100, a.heartDiseaseRisk && a.heartDiseaseRisk >= 60 ? 'HIGH' : 'MEDIUM', 15)
+  addRow('Cholesterol above range', a.cholesterol, 'mg/dL', 0, 200, a.heartDiseaseRisk && a.heartDiseaseRisk >= 60 ? 'HIGH' : 'MEDIUM', 18)
+  addRow('LDL cholesterol elevated', a.ldl, 'mg/dL', 0, 100, a.heartDiseaseRisk && a.heartDiseaseRisk >= 60 ? 'HIGH' : 'MEDIUM', 20)
+  addRow('Creatinine above range', a.creatinine, 'mg/dL', 0.6, 1.2, a.kidneyDiseaseRisk && a.kidneyDiseaseRisk >= 60 ? 'HIGH' : 'MEDIUM', 22)
+  addRow('ALT enzyme elevation', a.altEnzyme, 'U/L', 0, 40, a.liverDiseaseRisk && a.liverDiseaseRisk >= 60 ? 'HIGH' : 'MEDIUM', 25)
+
+  return rows.slice(0, 5)
+}
+
+function parseVarianceRows(keyFactors: string[], createdAt: string, assessment: AssessmentWithResults): VarianceRow[] {
   const baseDate = new Date(createdAt)
 
-  const defaultRows: VarianceRow[] = [
-    {
-      triggerEvent: 'Fasting glucose elevation',
-      date: new Date(baseDate.getTime() - 7 * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      metricShift: '↑ +12 mg/dL',
-      riskImpact: 'HIGH',
-      status: 'ACTIVE',
-    },
-    {
-      triggerEvent: 'Blood pressure spike',
-      date: new Date(baseDate.getTime() - 14 * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      metricShift: '↑ +8 mmHg systolic',
-      riskImpact: 'MEDIUM',
-      status: 'MONITORING',
-    },
-    {
-      triggerEvent: 'HbA1c threshold approach',
-      date: new Date(baseDate.getTime() - 21 * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      metricShift: '↑ +0.3%',
-      riskImpact: 'MEDIUM',
-      status: 'MONITORING',
-    },
-  ]
+  const assessmentRows = buildVarianceFromAssessment(assessment, baseDate)
 
-  const mappedRows: VarianceRow[] = keyFactors.slice(0, 5).map((factor, i) => {
+  const factorRows: VarianceRow[] = keyFactors.slice(0, 5).map((factor, i) => {
     const daysAgo = (i + 1) * 7
     const d = new Date(baseDate.getTime() - daysAgo * 86400000)
     const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 
-    // Determine impact from factor text
     const upper = factor.toUpperCase()
     let riskImpact: 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW'
     if (upper.includes('HIGH') || upper.includes('ELEVATED') || upper.includes('CRITICAL')) riskImpact = 'HIGH'
     else if (upper.includes('MODERATE') || upper.includes('APPROACHING') || upper.includes('BORDERLINE')) riskImpact = 'MEDIUM'
 
-    // Determine status
     let status: 'ACTIVE' | 'RESOLVED' | 'MONITORING' = 'MONITORING'
     if (riskImpact === 'HIGH') status = 'ACTIVE'
     else if (i > 2) status = 'RESOLVED'
 
-    // Extract metric shift from factor text
     const metricMatch = factor.match(/\d+\.?\d*\s*(?:mg\/dL|%|mmHg|BPM|U\/L)/i)
     const metricShift = metricMatch ? `↑ ${metricMatch[0]}` : '↑ Detected'
 
     return { triggerEvent: factor, date: dateStr, metricShift, riskImpact, status }
   })
 
-  return mappedRows.length >= 3 ? mappedRows : defaultRows
+  const seen = new Set<string>()
+  const merged: VarianceRow[] = []
+  for (const row of [...assessmentRows, ...factorRows]) {
+    const key = row.triggerEvent.toLowerCase()
+    if (!seen.has(key)) {
+      seen.add(key)
+      merged.push(row)
+    }
+  }
+
+  return merged.length >= 3 ? merged.slice(0, 5) : [
+    ...merged,
+    ...assessmentRows.filter(r => !seen.has(r.triggerEvent.toLowerCase())).slice(0, 3 - merged.length),
+  ].slice(0, 5)
 }
 
 const impactStyles: Record<string, string> = {
@@ -84,8 +115,8 @@ const statusDots: Record<string, string> = {
   RESOLVED: 'bg-tertiary-fixed-dim',
 }
 
-export default function VarianceTable({ keyFactors, createdAt }: VarianceTableProps) {
-  const rows = parseVarianceRows(keyFactors, createdAt)
+export default function VarianceTable({ keyFactors, createdAt, assessment }: VarianceTableProps) {
+  const rows = parseVarianceRows(keyFactors, createdAt, assessment)
 
   return (
     <div className="surface-glass rounded-2xl p-6">

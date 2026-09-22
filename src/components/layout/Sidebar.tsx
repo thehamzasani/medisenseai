@@ -28,6 +28,9 @@ export default function Sidebar() {
         <span className="text-headline-md font-bold text-primary-fixed-dim tracking-tight">
           MediSense AI
         </span>
+        <span className="text-[11px] text-on-surface-variant">
+          Haider Shah — UWE Bristol
+        </span>
       </div>
 
       {/* Nav items */}

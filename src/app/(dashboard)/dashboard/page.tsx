@@ -84,6 +84,9 @@ export default async function DashboardPage() {
                 ? `You have ${assessments.length} assessment${assessments.length !== 1 ? 's' : ''} on record. Latest health score: ${latestAssessment?.overallHealthIndex ?? '—'}/100.`
                 : 'No assessments yet. Start your first clinical analysis below.'}
             </p>
+            <p className="text-label-sm text-on-surface-variant/60 mt-3">
+              Developed by Haider Shah · UWE Bristol
+            </p>
           </div>
           <Link
             href="/assessment/new"

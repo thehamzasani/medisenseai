@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { FormProvider, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -131,6 +131,13 @@ export default function AssessmentWizard() {
   const [phase, setPhase] = useState<AnalysisPhase>('idle')
   const [enginesComplete, setEnginesComplete] = useState(0)
   const [visibleEngines, setVisibleEngines] = useState(0)
+  const currentStepRef = useRef(1)
+
+  const applyStep = (step: number | ((prev: number) => number)) => {
+    const next = typeof step === 'function' ? step(currentStepRef.current) : step
+    currentStepRef.current = next
+    setCurrentStep(next)
+  }
 
   // Staggered engine reveal animation — simulates 10 engines completing over time
   // even though results arrive in a single batch from the 2-call architecture
@@ -161,29 +168,37 @@ export default function AssessmentWizard() {
   const activeStepConfig = STEPS.find((s) => s.id === currentStep)!
   const StepComponent = activeStepConfig.component
 
-  async function goNext() {
+  async function goNext(e?: React.MouseEvent) {
+    e?.preventDefault()
+    e?.stopPropagation()
     const valid = await trigger(activeStepConfig.fields)
     if (!valid) {
       toast.error('Please correct the highlighted fields before continuing.')
       return
     }
-    setCompletedSteps((prev) => new Set(prev).add(currentStep))
-    if (currentStep < STEPS.length) setCurrentStep((s) => s + 1)
+    setCompletedSteps((prev) => new Set(prev).add(currentStepRef.current))
+    if (currentStepRef.current < STEPS.length) {
+      applyStep((s) => s + 1)
+    }
   }
 
   function goToStep(stepId: number) {
-    if (stepId === currentStep) return
-    if (stepId < currentStep || completedSteps.has(stepId - 1) || stepId === 1) {
-      setCurrentStep(stepId)
+    if (stepId === currentStepRef.current) return
+    if (stepId < currentStepRef.current || completedSteps.has(stepId - 1) || stepId === 1) {
+      applyStep(stepId)
     }
   }
 
   function goBack() {
-    if (currentStep > 1) setCurrentStep((s) => s - 1)
+    if (currentStepRef.current > 1) applyStep((s) => s - 1)
   }
 
   const onSubmit = useCallback(
     async (data: AssessmentFormData) => {
+      // Guard: analysis may only start from the final step
+      if (currentStepRef.current !== STEPS.length) {
+        return
+      }
       setPhase('submitting')
       try {
         const createRes = await fetch('/api/assessment', {
@@ -250,9 +265,17 @@ export default function AssessmentWizard() {
   const isLastStep = currentStep === STEPS.length
   const isAnalyzing = phase === 'submitting' || phase === 'analyzing'
 
+  const handleFormSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
+    e.preventDefault()
+    if (currentStepRef.current !== STEPS.length) {
+      return
+    }
+    void handleSubmit(onSubmit)(e)
+  }
+
   return (
     <FormProvider {...methods}>
-      <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-12 gap-lg">
+      <form onSubmit={handleFormSubmit} className="grid grid-cols-12 gap-lg">
         {/* Left tab nav */}
         <div className="col-span-3">
           <div className="surface-glass rounded-xl p-md space-y-2 sticky top-20">
@@ -284,7 +307,7 @@ export default function AssessmentWizard() {
         {/* Right content */}
         <div className="col-span-9 space-y-lg">
           <div className="surface-glass rounded-xl p-xl">
-            <StepComponent />
+            <StepComponent key={currentStep} />
           </div>
 
           <div className="flex items-center justify-between gap-md">
@@ -298,7 +321,13 @@ export default function AssessmentWizard() {
             </button>
 
             {!isLastStep ? (
-              <button type="button" onClick={goNext} className="btn-cyan px-8 py-3 rounded-full">
+              <button
+                type="button"
+                onClick={(e) => {
+                  void goNext(e)
+                }}
+                className="btn-cyan px-8 py-3 rounded-full"
+              >
                 Next Step
               </button>
             ) : (

@@ -6,6 +6,7 @@ import AssessmentSelector from '@/components/assessment/AssessmentSelector'
 import PatientSummaryCard from '@/components/results/PatientSummaryCard'
 import DiseasePredictionCard from '@/components/results/DiseasePredictionCard'
 import ClinicalInsightCard from '@/components/results/ClinicalInsightCard'
+import ResultsActions from '@/components/results/ResultsActions'
 import { ENGINE_DEFINITIONS } from '@/constants'
 import type { TrendDirection } from '@/types'
 
@@ -169,29 +170,11 @@ export default async function ResultsPage({ params }: Props) {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
-          {/* Export PDF button — placeholder, wired in Task 14 */}
-          <button className="
-            flex items-center gap-2 px-4 py-2.5 rounded-xl
-            border border-outline-variant/40 text-on-surface-variant text-sm
-            hover:border-primary-fixed-dim/50 hover:text-primary-fixed-dim
-            transition-all duration-200
-          ">
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>picture_as_pdf</span>
-            Export PDF
-          </button>
-
-          {/* Consult MD button */}
-          <button className="
-            flex items-center gap-2 px-4 py-2.5 rounded-xl
-            border border-primary-fixed-dim/40 text-primary-fixed-dim text-sm
-            hover:bg-primary-fixed-dim/10
-            transition-all duration-200
-          ">
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>local_hospital</span>
-            Consult MD
-          </button>
-        </div>
+        <ResultsActions
+          assessment={assessment}
+          userName={userName}
+          userBloodType={userBloodType}
+        />
       </div>
 
       {/* ── Assessment selector ── */}

@@ -16,9 +16,11 @@ export async function generateAssessmentPDF(
 
   const container = document.createElement('div')
   container.style.cssText = `
-    position: fixed;
-    top: -9999px;
-    left: -9999px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: -1;
+    pointer-events: none;
     width: 900px;
     background: #ffffff;
     color: #1a1a2e;
@@ -266,6 +268,10 @@ export async function generateAssessmentPDF(
   document.body.appendChild(container)
 
   try {
+    if (document.fonts?.ready) {
+      await document.fonts.ready
+    }
+
     const canvas = await html2canvas(container, {
       scale: 2,
       useCORS: true,
